@@ -1,25 +1,407 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>php on Azuka</title>
-    <link>https://azuka.github.io/tags/php/</link>
-    <description>Recent content in php on Azuka</description>
-    <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language>
-    <lastBuildDate>Wed, 18 Dec 2019 07:58:36 -0800</lastBuildDate>
-    
-	<atom:link href="https://azuka.github.io/tags/php/index.xml" rel="self" type="application/rss+xml" />
-    
-    
-    <item>
-      <title>A Poor Guy&#39;s Local PHP Apm</title>
-      <link>https://azuka.github.io/posts/post-0001-a-poor-guys-apm/</link>
-      <pubDate>Wed, 18 Dec 2019 07:58:36 -0800</pubDate>
-      
-      <guid>https://azuka.github.io/posts/post-0001-a-poor-guys-apm/</guid>
-      <description>I&amp;rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend Javascript, and more recently, NodeJS.
-When you have access to a full APM solution like I do at work (Newrelic), or on the side (with Elastic APM), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also why.</description>
-    </item>
-    
-  </channel>
+ <channel>
+   <title>php on Azuka</title>
+   <link>https://azuka.github.io/tags/php/</link>
+   <description>Recent content in php on Azuka</description>
+   <generator>Hugo -- gohugo.io</generator>
+   <language>en-us</language>
+   <lastBuildDate>Wed, 18 Dec 2019 07:58:36 -0800</lastBuildDate>
+   
+       <atom:link href="https://azuka.github.io/tags/php/index.xml" rel="self" type="application/rss+xml" />
+   
+   
+     <item>
+       <title>A Poor Guy&#39;s Local PHP Apm</title>
+       <link>https://azuka.github.io/posts/post-0001-a-poor-guys-apm/</link>
+       <pubDate>Wed, 18 Dec 2019 07:58:36 -0800</pubDate>
+       
+       <guid>https://azuka.github.io/posts/post-0001-a-poor-guys-apm/</guid>
+       <description>&lt;p&gt;I&amp;rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend Javascript, and more recently, NodeJS.&lt;/p&gt;
+
+&lt;p&gt;When you have access to a full APM solution like I do at work (Newrelic), or on the side (with &lt;a href=&#34;https://www.elastic.co/products/apm&#34;&gt;Elastic APM&lt;/a&gt;), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also &lt;em&gt;why&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;I ran into a situation where one of &lt;a href=&#34;https://www.congregateonline.com/&#34;&gt;my first projects&lt;/a&gt; experienced a bottleneck
+with slow page loads. In Newrelic Lite (the free forever plan), I could tell that on average, we were making
+select queries on a table over a 100 times per page load on average. Most of this code was written in 2010
+(my excuse, although not a very good one), and at a glance it wasn&amp;rsquo;t easy to tell &lt;em&gt;where&lt;/em&gt; exactly the problem was, although I knew what it was: &lt;a href=&#34;https://www.mehdi-khalili.com/orm-anti-patterns-part-3-lazy-loading&#34;&gt;ORM lazy loading in a loop&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s a recent issue I fixed.&lt;/p&gt;
+
+&lt;p&gt;Upgrading to the a pricier version of Newrelic was not an option. I had a local version of the application working with docker-compose: was there perhaps a solution I could run locally, while pinpointing the exact problem? There had to be.&lt;/p&gt;
+
+&lt;p&gt;I tried:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;XDebug&lt;/strong&gt;. The holy grail. Grind viewers were less than helpful getting an exact call sequence. Not fun.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PHP APM (&lt;a href=&#34;https://pecl.php.net/package/APM&#34;&gt;https://pecl.php.net/package/APM&lt;/a&gt;)&lt;/strong&gt;. This hasn&amp;rsquo;t been updated since 2017, fails to build on &lt;a href=&#34;https://github.com/patrickallaert/php-apm/issues/73&#34;&gt;PHP 7.3&lt;/a&gt;, and I experienced random application crashes on 7.2.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Pinpoint APM (&lt;a href=&#34;https://naver.github.io/pinpoint/&#34;&gt;https://naver.github.io/pinpoint/&lt;/a&gt;)&lt;/strong&gt;. Let&amp;rsquo;s just say there was a lot of headscratching, especially around the install. I sort of got it working, but didn&amp;rsquo;t get any useful data. Also, more random crashes.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;I tried other APM solutions, most of them Saas, but the hurdle was either installing them, the signup/activation process, or the knowledge that I wouldn&amp;rsquo;t be able to reliable diagnose another problem after the trials ran out.&lt;/p&gt;
+
+&lt;p&gt;But wait. I&amp;rsquo;d done some work with OpenTracing and OpenCensus before. Could I&amp;hellip;?&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/census-instrumentation/opencensus-php&#34;&gt;YES!&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;I modified my Dockerfile very simply:&lt;/p&gt;
+
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-docker&#34; data-lang=&#34;docker&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; php:7.3-apache&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Everything else&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get update &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; apt-get install -y zlib1g-dev libzip-dev zip unzip &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;    docker-php-ext-install iconv bcmath zip mysqli opcache pdo pdo_mysql &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;    echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;done!&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# OpenCensus&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; curl -L https://github.com/census-instrumentation/opencensus-php/archive/master.zip -o opencensus.zip &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; unzip opencensus.zip&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;cd opencensus-php-*/ext &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; phpize &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; ./configure --enable-opencensus &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make test &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make install&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; docker-php-ext-enable opencensus&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;I added both &lt;code&gt;opencensus/opencensus&lt;/code&gt; and &lt;code&gt;opencensus/opencensus-exporter-zipkin&lt;/code&gt; (for &lt;a href=&#34;https://www.jaegertracing.io/&#34;&gt;Jaeger&lt;/a&gt;) to composer. I didn&amp;rsquo;t use &lt;code&gt;opencensus/opencensus-exporter-jaeger&lt;/code&gt; at the time due to &lt;a href=&#34;https://github.com/census-ecosystem/opencensus-php-exporter-jaeger/issues/7&#34;&gt;this issue&lt;/a&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;composer require --dev &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;opencensus/opencensus:^0.5.2&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;opencensus/opencensus-exporter-zipkin:^0.1.0&amp;#39;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Followed by changing my docker-compose.yml:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;version: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;3.6&amp;#39;&lt;/span&gt;
+services:
+  app:
+    build: .
+    links:
+      - db
+    ports:
+      - &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;7999:80&amp;#39;&lt;/span&gt;
+    expose:
+      - &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;80&amp;#39;&lt;/span&gt;
+    volumes:
+      - .:/var/www/html
+    environment:
+      - DB_HOST=db
+      - DB_NAME=appdb
+      - DB_USER=root
+      - DB_PASS=phpapptest
+      - DB_PORT=&lt;span style=&#34;color:#ae81ff&#34;&gt;3306&lt;/span&gt;
+      - KOHANA_ENV=DEVELOPMENT
+  db:
+    image: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mariadb:10&amp;#39;&lt;/span&gt;
+    ports:
+      - &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;3360:3306&amp;#39;&lt;/span&gt;
+    volumes:
+      - ./build/phpunit_database.sql:/docker-entrypoint-initdb.d/db.sql
+      - ./docker/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: phpapptest
+      MYSQL_DATABASE: appdb
+  opencensus:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_ZIPKIN_HTTP_PORT: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;9411&amp;#39;&lt;/span&gt;
+    ports:
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;9400&lt;/span&gt;:&lt;span style=&#34;color:#ae81ff&#34;&gt;16686&lt;/span&gt;
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;9414&lt;/span&gt;:&lt;span style=&#34;color:#ae81ff&#34;&gt;9411&lt;/span&gt;
+    expose:
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;5775&lt;/span&gt;/udp
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;6831&lt;/span&gt;/udp
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;6832&lt;/span&gt;/udp
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;5778&lt;/span&gt;
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;16686&lt;/span&gt;
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;14268&lt;/span&gt;
+      - &lt;span style=&#34;color:#ae81ff&#34;&gt;9411&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;With that, I had the Jaeger endpoint running at &lt;code&gt;http://localhost:9400&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;In my application entry point, right after including &lt;code&gt;vendor/autoload.php&lt;/code&gt;, I added the below:&lt;/p&gt;
+
+&lt;p&gt;There&amp;rsquo;s some gore in there because we&amp;rsquo;re in the middle of replacing &lt;a href=&#34;https://koseven.ga&#34;&gt;&lt;del&gt;Kohana&lt;/del&gt; Koseven&lt;/a&gt; with &lt;a href=&#34;https://laravel.io&#34;&gt;Laravel&lt;/a&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-php&#34; data-lang=&#34;php&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;OpenCensus\Trace\Span&lt;/span&gt;;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;OpenCensus\Trace\Tracer&lt;/span&gt;;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;OpenCensus\Trace\Exporter\ZipkinExporter&lt;/span&gt;;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;extension_loaded&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;opencensus&amp;#39;&lt;/span&gt;)) {
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Inbuilt instrumentation
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;OpenCensus\Trace\Integrations\Mysql&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;load&lt;/span&gt;();
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;OpenCensus\Trace\Integrations\PDO&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;load&lt;/span&gt;();
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;OpenCensus\Trace\Integrations\Eloquent&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;load&lt;/span&gt;();
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;OpenCensus\Trace\Integrations\Curl&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;load&lt;/span&gt;();
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Other
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;trim&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;PageManager&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;\\&amp;#39;&lt;/span&gt;), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;__construct&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;__construct&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;PageManager&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;get&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $id){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;get&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;PageManager&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;init&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;init&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;PageManager&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;top&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;top&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;PageManager&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;topMenu&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;topMenu&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Views
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_View&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;factory&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $file){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;find_all&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;array_map&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;strval&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;file&amp;#39;&lt;/span&gt;)),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_View&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;render&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;render&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Database and ORM
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_ORM&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;find_all&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;find_all&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_ORM&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;find&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;find&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    $databaseClasses &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Database&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Database_MySQLi&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;Database_CMySQLi&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;];
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;foreach&lt;/span&gt; ($databaseClasses &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; $databaseClass) {
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($databaseClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;query&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $type, $sql){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;query&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;query&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; $sql],
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($databaseClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;begin&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;begin&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($databaseClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;commit&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;commit&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($databaseClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rollback&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rollback&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+    }
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Controllers
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    $controllerClasses &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Controller&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;Controller&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;Base_Controller&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;];
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;foreach&lt;/span&gt; ($controllerClasses &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; $controllerClass) {
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($controllerClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;__construct&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;__construct&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($controllerClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;before&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;before&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($controllerClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;after&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;after&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;($controllerClass, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute&amp;#39;&lt;/span&gt;),
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+            ];
+        });
+    }
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Controller_Page&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;setup&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;setup&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Request execution and responses
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Request&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Request_Client&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Request_Client&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute_request&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;execute_request&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Request&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;process&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;process&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Response&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;body&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;body&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Response&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;send_headers&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;send_headers&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Routing
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Route&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;set&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $name){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;array_map&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;strval&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt;)),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;Kohana_Route&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cache&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cache&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Laravel
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\CongreGATEv7\Models\User&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;findForPassport&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;findForPassport&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\CongreGATEv7\Models\User&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;validateForPassportPasswordGrant&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;validateForPassportPasswordGrant&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\CongreGATEv7\Models\User&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;getAuthIdentifierName&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;getAuthIdentifierName&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\Illuminate\Auth\EloquentUserProvider&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;retrieveById&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $identifier){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;retrieveById&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;array_map&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;strval&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;identifier&amp;#39;&lt;/span&gt;)),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\Illuminate\Auth\EloquentUserProvider&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;retrieveByToken&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $identifier, $token){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;retrieveByToken&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;array_map&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;strval&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;identifier&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;token&amp;#39;&lt;/span&gt;)),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\Illuminate\Auth\EloquentUserProvider&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;updateRememberToken&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $user, $token){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;updateRememberToken&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;array_map&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;strval&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;compact&lt;/span&gt;( &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;token&amp;#39;&lt;/span&gt;)),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\Illuminate\Auth\EloquentUserProvider&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;retrieveByCredentials&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope, $user, $token){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;retrieveByCredentials&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;opencensus_trace_method&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\Illuminate\Auth\EloquentUserProvider&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;class&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;validateCredentials&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;($scope){
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; [
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sprintf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;%s::%s&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;get_class&lt;/span&gt;($scope), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;validateCredentials&amp;#39;&lt;/span&gt;),
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;kind&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Span&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;KIND_CLIENT&lt;/span&gt;,
+        ];
+    });
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Tracer&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;start&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ZipkinExporter&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;congregate&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;http://opencensus:9411/api/v2/spans&amp;#39;&lt;/span&gt;));
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;For a case where I needed a stacktrace (calling &lt;code&gt;debug_backtrace()&lt;/code&gt; or &lt;code&gt;debug_print_backtrace()&lt;/code&gt; inside one of the scoped lambda functions above WILL crash the application), I had to do something this ugly:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-php&#34; data-lang=&#34;php&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;?php&lt;/span&gt;
+
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;find_all&lt;/span&gt;()
+    {
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;extension_loaded&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;opencensus&amp;#39;&lt;/span&gt;)) {
+            &lt;span style=&#34;color:#a6e22e&#34;&gt;ob_start&lt;/span&gt;();
+            &lt;span style=&#34;color:#a6e22e&#34;&gt;debug_print_backtrace&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;DEBUG_BACKTRACE_IGNORE_ARGS&lt;/span&gt;);
+            $trace &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ob_get_clean&lt;/span&gt;();
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Tracer&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;inSpan&lt;/span&gt;([
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Model_Page::find_all.instrumented&amp;#39;&lt;/span&gt;,
+                &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;attributes&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; [
+                    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;trace&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; $trace,
+                ]
+            ], &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;() {
+                &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;parent&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;find_all&lt;/span&gt;();
+            });
+        }
+
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;parent&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;find_all&lt;/span&gt;();
+    }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;A couple days ago, I was told calendar feeds were loading very slowly. All I had to do was look in Newrelic:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://azuka.github.io/posts/post1/newrelic-breakdown.png&#34; alt=&#34;Newrelic APM Stats&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Not good. Given these relationships:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Event
+(belongsTo) EventCategory
+(hasMany) EventUnavailabilities
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;on average we were querying for events 20 times, categories 57 times, unavailabilities
+(time ranges to exclude events) &lt;strong&gt;359&lt;/strong&gt; times, and members and families for birthdays and anniversaries on the member calendar
+roughly 15-20 times on average. NOT GOOD.&lt;/p&gt;
+
+&lt;p&gt;Looking locally, I saw this which has a whopping 678 spans:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://azuka.github.io/posts/post1/jaeger-take-1.png&#34; alt=&#34;Jaeger&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;A quick rewrite later, by prefetching, I got this:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://azuka.github.io/posts/post1/jaeger-take-2.png&#34; alt=&#34;Jaeger&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;322 spans, which looks much saner.&lt;/p&gt;
+
+&lt;p&gt;Even Newrelic agrees:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://azuka.github.io/posts/post1/newrelic-breakdown-2.png&#34; alt=&#34;Newrelic APM Stats&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;And that, friends, is one way to run a local APM for PHP.&lt;/p&gt;
+</description>
+     </item>
+   
+ </channel>
 </rss>
