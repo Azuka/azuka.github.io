@@ -11,14 +11,13 @@
 <meta property="og:description" content="" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://azuka.github.io/" />
-
-<meta property="og:updated_time" content="2019-12-18T07:58:36-08:00" />
+<meta property="og:updated_time" content="2020-02-28T09:42:14-08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Azuka"/>
 <meta name="twitter:description" content=""/>
 
-<meta name="generator" content="Hugo 0.58.3" />
+<meta name="generator" content="Hugo 0.65.3" />
     
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css" />
@@ -87,6 +86,39 @@
         <ul>
           
           <li class="first">
+            <h1><a href="https://azuka.github.io/posts/post-0002-that-minor-snafu-with-go-types/" title="That Minor SNAFU With Go Types">That Minor SNAFU With Go Types</a></h1>
+            <aside>
+    <ul>
+        <li>
+            <time class="post-date" datetime="2020-02-28T09:42:14-08:00">Feb 28, 2020</time>
+        </li>
+        
+
+        
+        <li>
+            <em>
+                
+                    
+                    <a href="/tags/go">#go</a>
+                
+            </em>
+        </li>
+        
+
+        <li>2 minutes read</li>
+    </ul>
+</aside>
+
+            <p>Today&rsquo;s specimen:
+type expectedError struct { error } func (e *expectedError) Cause() error { return e.error } func IsExpectedError(err error) bool { _, ok := err.(*expectedError) return ok } In one of my projects, I&rsquo;m using consul for distributed locking, to prevent processing an item twice from a queue worker.
+My implementation looked something like the below:
+import ( &#34;context&#34; &#34;github.com/hashicorp/consul/api&#34; &#34;github.com/pkg/errors&#34; &#34;os&#34; &#34;time&#34; ) type lock struct { db datasource.</p>
+            
+            <a href="/posts/post-0002-that-minor-snafu-with-go-types/">Read more…</a>
+            
+          </li>
+          
+          <li >
             <h1><a href="https://azuka.github.io/posts/post-0001-a-poor-guys-apm/" title="A Poor Guy&#39;s Local PHP Apm">A Poor Guy&#39;s Local PHP Apm</a></h1>
             <aside>
     <ul>

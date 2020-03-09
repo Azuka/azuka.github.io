@@ -20,7 +20,7 @@ When you have access to a full APM solution like I do at work (Newrelic), or on 
 <meta name="twitter:description" content="I&rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend Javascript, and more recently, NodeJS.
 When you have access to a full APM solution like I do at work (Newrelic), or on the side (with Elastic APM), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also why."/>
 
-<meta name="generator" content="Hugo 0.58.3" />
+<meta name="generator" content="Hugo 0.65.3" />
     
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css" />
@@ -124,32 +124,22 @@ When you have access to a full APM solution like I do at work (Newrelic), or on 
     
 
     <p>I&rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend Javascript, and more recently, NodeJS.</p>
-
 <p>When you have access to a full APM solution like I do at work (Newrelic), or on the side (with <a href="https://www.elastic.co/products/apm">Elastic APM</a>), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also <em>why</em>.</p>
-
 <p>I ran into a situation where one of <a href="https://www.congregateonline.com/">my first projects</a> experienced a bottleneck
 with slow page loads. In Newrelic Lite (the free forever plan), I could tell that on average, we were making
 select queries on a table over a 100 times per page load on average. Most of this code was written in 2010
 (my excuse, although not a very good one), and at a glance it wasn&rsquo;t easy to tell <em>where</em> exactly the problem was, although I knew what it was: <a href="https://www.mehdi-khalili.com/orm-anti-patterns-part-3-lazy-loading">ORM lazy loading in a loop</a>.</p>
-
 <p>Upgrading to the a pricier version of Newrelic was not an option. I had a local version of the application working with docker-compose: was there perhaps a solution I could run locally, while pinpointing the exact problem? There had to be.</p>
-
 <p>I tried:</p>
-
 <ul>
 <li><strong>XDebug</strong>. The holy grail. Grind viewers were less than helpful getting an exact call sequence. Not fun.</li>
 <li><strong>PHP APM (<a href="https://pecl.php.net/package/APM">https://pecl.php.net/package/APM</a>)</strong>. This hasn&rsquo;t been updated since 2017, fails to build on <a href="https://github.com/patrickallaert/php-apm/issues/73">PHP 7.3</a>, and I experienced random application crashes on 7.2.</li>
 <li><strong>Pinpoint APM (<a href="https://naver.github.io/pinpoint/">https://naver.github.io/pinpoint/</a>)</strong>. Let&rsquo;s just say there was a lot of headscratching, especially around the install. I sort of got it working, but didn&rsquo;t get any useful data. Also, more random crashes.</li>
 </ul>
-
 <p>I tried other APM solutions, most of them Saas, but the hurdle was either installing them, the signup/activation process, or the knowledge that I wouldn&rsquo;t be able to reliable diagnose another problem after the trials ran out.</p>
-
 <p>But wait. I&rsquo;d done some work with OpenTracing and OpenCensus before. Could I&hellip;?</p>
-
 <p><a href="https://github.com/census-instrumentation/opencensus-php">YES!</a></p>
-
 <p>I modified my Dockerfile very simply:</p>
-
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-docker" data-lang="docker"><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> php:7.3-apache</span><span style="color:#960050;background-color:#1e0010">
 </span><span style="color:#960050;background-color:#1e0010">
 </span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># Everything else</span><span style="color:#960050;background-color:#1e0010">
@@ -161,58 +151,55 @@ select queries on a table over a 100 times per page load on average. Most of thi
 </span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> curl -L https://github.com/census-instrumentation/opencensus-php/archive/master.zip -o opencensus.zip <span style="color:#f92672">&amp;&amp;</span> unzip opencensus.zip<span style="color:#960050;background-color:#1e0010">
 </span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> <span style="color:#f92672">(</span>cd opencensus-php-*/ext <span style="color:#f92672">&amp;&amp;</span> phpize <span style="color:#f92672">&amp;&amp;</span> ./configure --enable-opencensus <span style="color:#f92672">&amp;&amp;</span> make <span style="color:#f92672">&amp;&amp;</span> make test <span style="color:#f92672">&amp;&amp;</span> make install<span style="color:#f92672">)</span><span style="color:#960050;background-color:#1e0010">
 </span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> docker-php-ext-enable opencensus</code></pre></div>
-
 <p>I added both <code>opencensus/opencensus</code> and <code>opencensus/opencensus-exporter-zipkin</code> (for <a href="https://www.jaegertracing.io/">Jaeger</a>) to composer. I didn&rsquo;t use <code>opencensus/opencensus-exporter-jaeger</code> at the time due to <a href="https://github.com/census-ecosystem/opencensus-php-exporter-jaeger/issues/7">this issue</a>.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">composer require --dev <span style="color:#e6db74">&#39;opencensus/opencensus:^0.5.2&#39;</span> <span style="color:#e6db74">&#39;opencensus/opencensus-exporter-zipkin:^0.1.0&#39;</span></code></pre></div>
-<p>Followed by changing my docker-compose.yml:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">version: <span style="color:#e6db74">&#39;3.6&#39;</span>
-services:
-  app:
-    build: .
-    links:
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">composer require --dev <span style="color:#e6db74">&#39;opencensus/opencensus:^0.5.2&#39;</span> <span style="color:#e6db74">&#39;opencensus/opencensus-exporter-zipkin:^0.1.0&#39;</span>
+</code></pre></div><p>Followed by changing my docker-compose.yml:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">version</span>: <span style="color:#e6db74">&#39;3.6&#39;</span>
+<span style="color:#66d9ef">services</span>:
+  <span style="color:#66d9ef">app</span>:
+    <span style="color:#66d9ef">build</span>: .
+    <span style="color:#66d9ef">links</span>:
       - db
-    ports:
+    <span style="color:#66d9ef">ports</span>:
       - <span style="color:#e6db74">&#39;7999:80&#39;</span>
-    expose:
+    <span style="color:#66d9ef">expose</span>:
       - <span style="color:#e6db74">&#39;80&#39;</span>
-    volumes:
+    <span style="color:#66d9ef">volumes</span>:
       - .:/var/www/html
-    environment:
+    <span style="color:#66d9ef">environment</span>:
       - DB_HOST=db
       - DB_NAME=appdb
       - DB_USER=root
       - DB_PASS=phpapptest
       - DB_PORT=<span style="color:#ae81ff">3306</span>
       - KOHANA_ENV=DEVELOPMENT
-  db:
-    image: <span style="color:#e6db74">&#39;mariadb:10&#39;</span>
-    ports:
+  <span style="color:#66d9ef">db</span>:
+    <span style="color:#66d9ef">image</span>: <span style="color:#e6db74">&#39;mariadb:10&#39;</span>
+    <span style="color:#66d9ef">ports</span>:
       - <span style="color:#e6db74">&#39;3360:3306&#39;</span>
-    volumes:
+    <span style="color:#66d9ef">volumes</span>:
       - ./build/phpunit_database.sql:/docker-entrypoint-initdb.d/db.sql
       - ./docker/mysql:/var/lib/mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: phpapptest
-      MYSQL_DATABASE: appdb
-  opencensus:
-    image: jaegertracing/all-in-one:latest
-    environment:
-      COLLECTOR_ZIPKIN_HTTP_PORT: <span style="color:#e6db74">&#39;9411&#39;</span>
-    ports:
+    <span style="color:#66d9ef">environment</span>:
+      <span style="color:#66d9ef">MYSQL_ROOT_PASSWORD</span>: phpapptest
+      <span style="color:#66d9ef">MYSQL_DATABASE</span>: appdb
+  <span style="color:#66d9ef">opencensus</span>:
+    <span style="color:#66d9ef">image</span>: jaegertracing/all-in-one:latest
+    <span style="color:#66d9ef">environment</span>:
+      <span style="color:#66d9ef">COLLECTOR_ZIPKIN_HTTP_PORT</span>: <span style="color:#e6db74">&#39;9411&#39;</span>
+    <span style="color:#66d9ef">ports</span>:
       - <span style="color:#ae81ff">9400</span>:<span style="color:#ae81ff">16686</span>
       - <span style="color:#ae81ff">9414</span>:<span style="color:#ae81ff">9411</span>
-    expose:
+    <span style="color:#66d9ef">expose</span>:
       - <span style="color:#ae81ff">5775</span>/udp
       - <span style="color:#ae81ff">6831</span>/udp
       - <span style="color:#ae81ff">6832</span>/udp
       - <span style="color:#ae81ff">5778</span>
       - <span style="color:#ae81ff">16686</span>
       - <span style="color:#ae81ff">14268</span>
-      - <span style="color:#ae81ff">9411</span></code></pre></div>
-<p>With that, I had the Jaeger endpoint running at <code>http://localhost:9400</code></p>
-
+      - <span style="color:#ae81ff">9411</span>
+</code></pre></div><p>With that, I had the Jaeger endpoint running at <code>http://localhost:9400</code></p>
 <p>In my application entry point, right after including <code>vendor/autoload.php</code>, I added the below:</p>
-
 <p>There&rsquo;s some gore in there because we&rsquo;re in the middle of replacing <a href="https://koseven.ga"><del>Kohana</del> Koseven</a> with <a href="https://laravel.io">Laravel</a>.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-php" data-lang="php"><span style="color:#75715e">&lt;?php</span>
 <span style="color:#66d9ef">use</span> <span style="color:#a6e22e">OpenCensus\Trace\Span</span>;
@@ -451,8 +438,7 @@ services:
     });
     <span style="color:#a6e22e">Tracer</span><span style="color:#f92672">::</span><span style="color:#a6e22e">start</span>(<span style="color:#66d9ef">new</span> <span style="color:#a6e22e">ZipkinExporter</span>(<span style="color:#e6db74">&#39;congregate&#39;</span>, <span style="color:#e6db74">&#39;http://opencensus:9411/api/v2/spans&#39;</span>));
 }
-</code></pre></div>
-<p>For a case where I needed a stacktrace (calling <code>debug_backtrace()</code> or <code>debug_print_backtrace()</code> inside one of the scoped lambda functions above WILL crash the application), I had to do something this ugly:</p>
+</code></pre></div><p>For a case where I needed a stacktrace (calling <code>debug_backtrace()</code> or <code>debug_print_backtrace()</code> inside one of the scoped lambda functions above WILL crash the application), I had to do something this ugly:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-php" data-lang="php"><span style="color:#75715e">&lt;?php</span>
 
     <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">function</span> <span style="color:#a6e22e">find_all</span>()
@@ -473,36 +459,22 @@ services:
 
         <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">parent</span><span style="color:#f92672">::</span><span style="color:#a6e22e">find_all</span>();
     }
-</code></pre></div>
-<p>A couple days ago, I was told calendar feeds were loading very slowly. All I had to do was look in Newrelic:</p>
-
-<p><img src="/posts/post1/newrelic-breakdown.png" alt="Newrelic APM Stats" /></p>
-
+</code></pre></div><p>A couple days ago, I was told calendar feeds were loading very slowly. All I had to do was look in Newrelic:</p>
+<p><img src="/posts/post1/newrelic-breakdown.png" alt="Newrelic APM Stats"></p>
 <p>Not good. Given these relationships:</p>
-
 <pre><code>Event
 (belongsTo) EventCategory
 (hasMany) EventUnavailabilities
-</code></pre>
-
-<p>on average we were querying for events 20 times, categories 57 times, unavailabilities
+</code></pre><p>on average we were querying for events 20 times, categories 57 times, unavailabilities
 (time ranges to exclude events) <strong>359</strong> times, and members and families for birthdays and anniversaries on the member calendar
 roughly 15-20 times on average. NOT GOOD.</p>
-
 <p>Looking locally, I saw this which has a whopping 678 spans:</p>
-
-<p><img src="/posts/post1/jaeger-take-1.png" alt="Jaeger" /></p>
-
+<p><img src="/posts/post1/jaeger-take-1.png" alt="Jaeger"></p>
 <p>A quick rewrite later, by prefetching, I got this:</p>
-
-<p><img src="/posts/post1/jaeger-take-2.png" alt="Jaeger" /></p>
-
+<p><img src="/posts/post1/jaeger-take-2.png" alt="Jaeger"></p>
 <p>322 spans, which looks much saner.</p>
-
 <p>Even Newrelic agrees:</p>
-
-<p><img src="/posts/post1/newrelic-breakdown-2.png" alt="Newrelic APM Stats" /></p>
-
+<p><img src="/posts/post1/newrelic-breakdown-2.png" alt="Newrelic APM Stats"></p>
 <p>And that, friends, is one way to run a local APM for PHP.</p>
 
 
@@ -512,6 +484,10 @@ roughly 15-20 times on average. NOT GOOD.</p>
 <section class="post-nav">
     <ul>
         
+        
+        <li>
+            <a href="https://azuka.github.io/posts/post-0002-that-minor-snafu-with-go-types/">That Minor SNAFU With Go Types <i class="fa fa-chevron-circle-right"></i> </a>
+        </li>
         
     </ul>
 </section>
