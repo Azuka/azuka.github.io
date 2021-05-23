@@ -1,257 +1,105 @@
-<!doctype html>
-
-<html lang="en-us">
-
-<head>
-  <title>Azuka</title>
-  <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="The HTML5 Herald" />
-<meta name="author" content="Azuka" /><meta property="og:title" content="That Minor SNAFU With Go Types" />
-<meta property="og:description" content="Today&rsquo;s specimen:
+<!doctype html><html lang=en-us><head><title>That Minor SNAFU With Go Types - Azuka</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="The HTML5 Herald"><meta name=author content="Azuka"><meta property="og:title" content="That Minor SNAFU With Go Types"><meta property="og:description" content="Today&rsquo;s specimen:
 type expectedError struct { error } func (e *expectedError) Cause() error { return e.error } func IsExpectedError(err error) bool { _, ok := err.(*expectedError) return ok } In one of my projects, I&rsquo;m using consul for distributed locking, to prevent processing an item twice from a queue worker.
 My implementation looked something like the below:
-import ( &#34;context&#34; &#34;github.com/hashicorp/consul/api&#34; &#34;github.com/pkg/errors&#34; &#34;os&#34; &#34;time&#34; ) type lock struct { db datasource." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://azuka.github.io/posts/post-0002-that-minor-snafu-with-go-types/" />
-<meta property="article:published_time" content="2020-02-28T09:42:14-08:00" />
-<meta property="article:modified_time" content="2020-02-28T09:42:14-08:00" />
-
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="That Minor SNAFU With Go Types"/>
-<meta name="twitter:description" content="Today&rsquo;s specimen:
+import ( &#34;context&#34; &#34;github.com/hashicorp/consul/api&#34; &#34;github.com/pkg/errors&#34; &#34;os&#34; &#34;time&#34; ) type lock struct { db datasource."><meta property="og:type" content="article"><meta property="og:url" content="https://azuka.github.io/posts/post-0002-that-minor-snafu-with-go-types/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-02-28T09:42:14-08:00"><meta property="article:modified_time" content="2020-02-28T09:42:14-08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="That Minor SNAFU With Go Types"><meta name=twitter:description content="Today&rsquo;s specimen:
 type expectedError struct { error } func (e *expectedError) Cause() error { return e.error } func IsExpectedError(err error) bool { _, ok := err.(*expectedError) return ok } In one of my projects, I&rsquo;m using consul for distributed locking, to prevent processing an item twice from a queue worker.
 My implementation looked something like the below:
-import ( &#34;context&#34; &#34;github.com/hashicorp/consul/api&#34; &#34;github.com/pkg/errors&#34; &#34;os&#34; &#34;time&#34; ) type lock struct { db datasource."/>
-
-<meta name="generator" content="Hugo 0.65.3" />
-    
-
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css" />
-  <link rel="stylesheet" href="https://azuka.github.io/fontawesome/css/all.min.css" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Slab|Ruda" />
-  <link rel="stylesheet" type="text/css" href="/css/styles.css" /></head>
-
-<body>
-  <div id="container">
-    <header>
-      <h1>
-                <a href="/">Azuka</a>
-            </h1>
-
-      <ul id="social-media">
-             <li>
-               <a href="https://github.com/Azuka" title="GitHub">
-               <i class="fab fa-github fa-lg"></i>
-               </a>
-             </li>
-             <li>
-               <a href="https://gitlab.com/Azuka" title="GitLab">
-               <i class="fab fa-gitlab fa-lg"></i>
-               </a>
-             </li>
-             <li>
-               <a href="https://twitter.com/zahymaka" title="Twitter">
-               <i class="fab fa-twitter fa-lg"></i>
-               </a>
-             </li>
-             <li>
-               <a href="https://linkedin.com/in/Azuka" title="LinkedIn">
-               <i class="fab fa-linkedin fa-lg"></i>
-               </a>
-             </li>
-             <li>
-               <a href="https://stackoverflow.com/users/66688/zahymaka" title="StackOverflow">
-               <i class="fab fa-stack-overflow fa-lg"></i>
-               </a>
-             </li>
-      </ul>
-      
-      <p><em>I like to tinker with things</em></p>
-      
-    </header>
-
-    
-<nav>
-    <ul>
-        
-        <li>
-            <a class="" href="/posts/">
-                <i class="fa-li fa  fa-lg"></i><span>Posts</span>
-            </a>
-        </li>
-        
-    </ul>
-</nav>
-
-    <main>
-
-
-
-
-<article>
-
-    <h1>That Minor SNAFU With Go Types</h1>
-
-    
-        <aside>
-    <ul>
-        <li>
-            <time class="post-date" datetime="2020-02-28T09:42:14-08:00">Feb 28, 2020</time>
-        </li>
-        
-
-        
-        <li>
-            <em>
-                
-                    
-                    <a href="/tags/go">#go</a>
-                
-            </em>
-        </li>
-        
-
-        <li>2 minutes read</li>
-    </ul>
-</aside>
-
-    
-
-    <p>Today&rsquo;s specimen:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">expectedError</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#66d9ef">error</span>
+import ( &#34;context&#34; &#34;github.com/hashicorp/consul/api&#34; &#34;github.com/pkg/errors&#34; &#34;os&#34; &#34;time&#34; ) type lock struct { db datasource."><meta name=generator content="Hugo 0.83.1"><link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin=anonymous><link rel=stylesheet href=https://azuka.github.io/fontawesome/css/all.min.css><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Roboto+Slab|Ruda"><link rel=stylesheet type=text/css href=/css/styles.css></head><body><div id=container><header><h1><a href=/>Azuka</a></h1><ul id=social-media><li><a href=https://github.com/Azuka title=GitHub><i class="fab fa-github fa-lg"></i></a></li><li><a href=https://gitlab.com/Azuka title=GitLab><i class="fab fa-gitlab fa-lg"></i></a></li><li><a href=https://twitter.com/zahymaka title=Twitter><i class="fab fa-twitter fa-lg"></i></a></li><li><a href=https://linkedin.com/in/Azuka title=LinkedIn><i class="fab fa-linkedin fa-lg"></i></a></li><li><a href=https://stackoverflow.com/users/66688/zahymaka title=StackOverflow><i class="fab fa-stack-overflow fa-lg"></i></a></li></ul><p><em>I like to tinker with things</em></p></header><nav><ul><li><a href=/posts/><i class="fa-li fa fa-lg"></i><span>Posts</span></a></li></ul></nav><main><article><h1>That Minor SNAFU With Go Types</h1><aside><ul><li><time class=post-date datetime=2020-02-28T09:42:14-08:00>Feb 28, 2020</time></li><li><em><a href=/tags/go>#go</a></em></li><li>2 minute read</li></ul></aside><p>Today&rsquo;s specimen:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#66d9ef>type</span> <span style=color:#a6e22e>expectedError</span> <span style=color:#66d9ef>struct</span> {
+	<span style=color:#66d9ef>error</span>
 }
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">e</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">expectedError</span>) <span style="color:#a6e22e">Cause</span>() <span style="color:#66d9ef">error</span> {
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">e</span>.<span style="color:#66d9ef">error</span>
+<span style=color:#66d9ef>func</span> (<span style=color:#a6e22e>e</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>expectedError</span>) <span style=color:#a6e22e>Cause</span>() <span style=color:#66d9ef>error</span> {
+	<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>e</span>.<span style=color:#66d9ef>error</span>
 }
 
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">IsExpectedError</span>(<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) <span style="color:#66d9ef">bool</span> {
-	<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">err</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">expectedError</span>)
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ok</span>
+<span style=color:#66d9ef>func</span> <span style=color:#a6e22e>IsExpectedError</span>(<span style=color:#a6e22e>err</span> <span style=color:#66d9ef>error</span>) <span style=color:#66d9ef>bool</span> {
+	<span style=color:#a6e22e>_</span>, <span style=color:#a6e22e>ok</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>err</span>.(<span style=color:#f92672>*</span><span style=color:#a6e22e>expectedError</span>)
+	<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>ok</span>
 }
-</code></pre></div><p>In one of my projects, I&rsquo;m using <a href="https://link.medium.com/rzNnWtY6r4">consul for distributed locking</a>, to prevent
-processing an item twice from a queue worker.</p>
-<p>My implementation looked something like the below:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">import</span> (
-	<span style="color:#e6db74">&#34;context&#34;</span>
-	<span style="color:#e6db74">&#34;github.com/hashicorp/consul/api&#34;</span>
-	<span style="color:#e6db74">&#34;github.com/pkg/errors&#34;</span>
-	<span style="color:#e6db74">&#34;os&#34;</span>
-	<span style="color:#e6db74">&#34;time&#34;</span>
+</code></pre></div><p>In one of my projects, I&rsquo;m using <a href=https://link.medium.com/rzNnWtY6r4>consul for distributed locking</a>, to prevent
+processing an item twice from a queue worker.</p><p>My implementation looked something like the below:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#f92672>import</span> (
+	<span style=color:#e6db74>&#34;context&#34;</span>
+	<span style=color:#e6db74>&#34;github.com/hashicorp/consul/api&#34;</span>
+	<span style=color:#e6db74>&#34;github.com/pkg/errors&#34;</span>
+	<span style=color:#e6db74>&#34;os&#34;</span>
+	<span style=color:#e6db74>&#34;time&#34;</span>
 )
 
-<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">lock</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">db</span>     <span style="color:#a6e22e">datasource</span>.<span style="color:#a6e22e">LockStore</span>
-	<span style="color:#a6e22e">consul</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">api</span>.<span style="color:#a6e22e">Client</span>
+<span style=color:#66d9ef>type</span> <span style=color:#a6e22e>lock</span> <span style=color:#66d9ef>struct</span> {
+	<span style=color:#a6e22e>db</span>     <span style=color:#a6e22e>datasource</span>.<span style=color:#a6e22e>LockStore</span>
+	<span style=color:#a6e22e>consul</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>api</span>.<span style=color:#a6e22e>Client</span>
 }
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">lock</span>) <span style="color:#a6e22e">AcquireLock</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">action</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">error</span>) <span style="color:#66d9ef">error</span> {
+<span style=color:#66d9ef>func</span> (<span style=color:#a6e22e>l</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>lock</span>) <span style=color:#a6e22e>AcquireLock</span>(<span style=color:#a6e22e>ctx</span> <span style=color:#a6e22e>context</span>.<span style=color:#a6e22e>Context</span>, <span style=color:#a6e22e>action</span> <span style=color:#66d9ef>string</span>, <span style=color:#a6e22e>f</span> <span style=color:#66d9ef>func</span>() <span style=color:#66d9ef>error</span>) <span style=color:#66d9ef>error</span> {
 
-	<span style="color:#a6e22e">lck</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">GetLock</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">action</span>)
+	<span style=color:#a6e22e>lck</span>, <span style=color:#a6e22e>err</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>l</span>.<span style=color:#a6e22e>db</span>.<span style=color:#a6e22e>GetLock</span>(<span style=color:#a6e22e>ctx</span>, <span style=color:#a6e22e>action</span>)
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">Wrap</span>(<span style="color:#a6e22e">err</span>, <span style="color:#e6db74">&#34;unable to query database for lock&#34;</span>)
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>errors</span>.<span style=color:#a6e22e>Wrap</span>(<span style=color:#a6e22e>err</span>, <span style=color:#e6db74>&#34;unable to query database for lock&#34;</span>)
 	}
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">lck</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">expectedError</span>{
-			<span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;item %s already processed at %s&#34;</span>, <span style="color:#a6e22e">action</span>, <span style="color:#a6e22e">lck</span>.<span style="color:#a6e22e">CreatedAt</span>.<span style="color:#a6e22e">Format</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">RFC3339</span>)),
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>lck</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>expectedError</span>{
+			<span style=color:#a6e22e>errors</span>.<span style=color:#a6e22e>Errorf</span>(<span style=color:#e6db74>&#34;item %s already processed at %s&#34;</span>, <span style=color:#a6e22e>action</span>, <span style=color:#a6e22e>lck</span>.<span style=color:#a6e22e>CreatedAt</span>.<span style=color:#a6e22e>Format</span>(<span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>RFC3339</span>)),
 		}
 	}
 
-	<span style="color:#a6e22e">lck</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">models</span>.<span style="color:#a6e22e">Lock</span>{
-		<span style="color:#a6e22e">Action</span>: <span style="color:#a6e22e">action</span>,
+	<span style=color:#a6e22e>lck</span> = <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>models</span>.<span style=color:#a6e22e>Lock</span>{
+		<span style=color:#a6e22e>Action</span>: <span style=color:#a6e22e>action</span>,
 	}
 
-	<span style="color:#75715e">// nolint
-</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">hn</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Hostname</span>()
+	<span style=color:#75715e>// nolint
+</span><span style=color:#75715e></span>	<span style=color:#a6e22e>hn</span>, <span style=color:#a6e22e>_</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>os</span>.<span style=color:#a6e22e>Hostname</span>()
 
-	<span style="color:#a6e22e">opts</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">api</span>.<span style="color:#a6e22e">LockOptions</span>{
-		<span style="color:#a6e22e">Key</span>:          <span style="color:#a6e22e">lck</span>.<span style="color:#a6e22e">Action</span>,
-		<span style="color:#a6e22e">Value</span>:        []byte(<span style="color:#e6db74">&#34;set by &#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">hn</span>),
-		<span style="color:#a6e22e">SessionTTL</span>:   <span style="color:#e6db74">&#34;120s&#34;</span>,
-		<span style="color:#a6e22e">LockWaitTime</span>: <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>,
+	<span style=color:#a6e22e>opts</span> <span style=color:#f92672>:=</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>api</span>.<span style=color:#a6e22e>LockOptions</span>{
+		<span style=color:#a6e22e>Key</span>:          <span style=color:#a6e22e>lck</span>.<span style=color:#a6e22e>Action</span>,
+		<span style=color:#a6e22e>Value</span>:        []byte(<span style=color:#e6db74>&#34;set by &#34;</span> <span style=color:#f92672>+</span> <span style=color:#a6e22e>hn</span>),
+		<span style=color:#a6e22e>SessionTTL</span>:   <span style=color:#e6db74>&#34;120s&#34;</span>,
+		<span style=color:#a6e22e>LockWaitTime</span>: <span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>Second</span> <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>,
 	}
 
-	<span style="color:#a6e22e">cLck</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">consul</span>.<span style="color:#a6e22e">LockOpts</span>(<span style="color:#a6e22e">opts</span>)
+	<span style=color:#a6e22e>cLck</span>, <span style=color:#a6e22e>err</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>l</span>.<span style=color:#a6e22e>consul</span>.<span style=color:#a6e22e>LockOpts</span>(<span style=color:#a6e22e>opts</span>)
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">WithStack</span>(<span style="color:#a6e22e">err</span>)
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>errors</span>.<span style=color:#a6e22e>WithStack</span>(<span style=color:#a6e22e>err</span>)
 	}
 
-	<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">cLck</span>.<span style="color:#a6e22e">Lock</span>(<span style="color:#66d9ef">nil</span>)
+	<span style=color:#a6e22e>_</span>, <span style=color:#a6e22e>err</span> = <span style=color:#a6e22e>cLck</span>.<span style=color:#a6e22e>Lock</span>(<span style=color:#66d9ef>nil</span>)
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">WithStack</span>(<span style="color:#a6e22e">err</span>)
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>errors</span>.<span style=color:#a6e22e>WithStack</span>(<span style=color:#a6e22e>err</span>)
 	}
 
-	<span style="color:#66d9ef">defer</span> <span style="color:#66d9ef">func</span>() {
-		<span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">cLck</span>.<span style="color:#a6e22e">Unlock</span>()
+	<span style=color:#66d9ef>defer</span> <span style=color:#66d9ef>func</span>() {
+		<span style=color:#a6e22e>_</span> = <span style=color:#a6e22e>cLck</span>.<span style=color:#a6e22e>Unlock</span>()
 	}()
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">f</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">WithStack</span>(<span style="color:#a6e22e">err</span>)
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> = <span style=color:#a6e22e>f</span>(); <span style=color:#a6e22e>err</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>errors</span>.<span style=color:#a6e22e>WithStack</span>(<span style=color:#a6e22e>err</span>)
 	}
 
-	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">expectedError</span>{
-		<span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">Wrapf</span>(<span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">CreateLock</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">lck</span>),
-			<span style="color:#e6db74">&#34;unable to save lock to database for %s at %s&#34;</span>,
-			<span style="color:#a6e22e">lck</span>.<span style="color:#a6e22e">Action</span>, <span style="color:#a6e22e">lck</span>.<span style="color:#a6e22e">CreatedAt</span>.<span style="color:#a6e22e">Format</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">RFC3339</span>))
+	<span style=color:#66d9ef>return</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>expectedError</span>{
+		<span style=color:#a6e22e>errors</span>.<span style=color:#a6e22e>Wrapf</span>(<span style=color:#a6e22e>l</span>.<span style=color:#a6e22e>db</span>.<span style=color:#a6e22e>CreateLock</span>(<span style=color:#a6e22e>ctx</span>, <span style=color:#a6e22e>lck</span>),
+			<span style=color:#e6db74>&#34;unable to save lock to database for %s at %s&#34;</span>,
+			<span style=color:#a6e22e>lck</span>.<span style=color:#a6e22e>Action</span>, <span style=color:#a6e22e>lck</span>.<span style=color:#a6e22e>CreatedAt</span>.<span style=color:#a6e22e>Format</span>(<span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>RFC3339</span>))
 	}
 }
-</code></pre></div><p>What could go wrong? Everything.</p>
-<p>Something like</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// Process message in a lock
-</span><span style="color:#75715e"></span><span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">lock</span>.<span style="color:#a6e22e">AcquireLock</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">action</span>, <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">error</span> {
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">sendMessage</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">m</span>, <span style="color:#a6e22e">accountName</span>)
+</code></pre></div><p>What could go wrong? Everything.</p><p>Something like</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#75715e>// Process message in a lock
+</span><span style=color:#75715e></span><span style=color:#a6e22e>err</span> = <span style=color:#a6e22e>w</span>.<span style=color:#a6e22e>lock</span>.<span style=color:#a6e22e>AcquireLock</span>(<span style=color:#a6e22e>ctx</span>, <span style=color:#a6e22e>action</span>, <span style=color:#66d9ef>func</span>() <span style=color:#66d9ef>error</span> {
+	<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>w</span>.<span style=color:#a6e22e>sendMessage</span>(<span style=color:#a6e22e>ctx</span>, <span style=color:#a6e22e>m</span>, <span style=color:#a6e22e>accountName</span>)
 })
 
-<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
 
-	<span style="color:#75715e">// This detects a lock-only error and uses that
-</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">locking</span>.<span style="color:#a6e22e">IsExpectedError</span>(<span style="color:#a6e22e">err</span>) {
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+	<span style=color:#75715e>// This detects a lock-only error and uses that
+</span><span style=color:#75715e></span>	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>locking</span>.<span style=color:#a6e22e>IsExpectedError</span>(<span style=color:#a6e22e>err</span>) {
+		<span style=color:#66d9ef>return</span> <span style=color:#66d9ef>nil</span>
 	}
 
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	<span style=color:#66d9ef>return</span> <span style=color:#a6e22e>err</span>
 }
 
-<span style="color:#a6e22e">doSomething</span>()
-</code></pre></div><p>would never execute <code>doSomething()</code>, even if <code>sendMessage()</code> succeeds, because I decided to be lazy and wrap the result of <code>CreateLock()</code> without checking for a non-nil error.</p>
-<p>Tiny bug, annoying to troubleshoot, until I wrote tests, which makes me wonder why I didn&rsquo;t write any in the first place.</p>
-
-
-</article>
-
-
-<section class="post-nav">
-    <ul>
-        
-        <li>
-            <a href="https://azuka.github.io/posts/post-0001-a-poor-guys-apm/"><i class="fa fa-chevron-circle-left"></i> A Poor Guy&#39;s Local PHP Apm</a>
-        </li>
-        
-        
-    </ul>
-</section>
-    
-
-
-
-
-
-</main>
-    <footer>
-        <h6> |
-            Rendered by <a href="https://gohugo.io" title="Hugo">Hugo</a> |
-            <a href="https://azuka.github.io/index.xml">Subscribe </a></h6>
-    </footer>
-</div>
-<script src="/js/scripts.js"></script>
-
-</body>
-
-</html>
-
+<span style=color:#a6e22e>doSomething</span>()
+</code></pre></div><p>would never execute <code>doSomething()</code>, even if <code>sendMessage()</code> succeeds, because I decided to be lazy and wrap the result of <code>CreateLock()</code> without checking for a non-nil error.</p><p>Tiny bug, annoying to troubleshoot, until I wrote tests, which makes me wonder why I didn&rsquo;t write any in the first place.</p></article><section class=post-nav><ul><li><a href=https://azuka.github.io/posts/post-0001-a-poor-guys-apm/><i class="fa fa-chevron-circle-left"></i> A Poor Guy's Local PHP Apm</a></li><li><a href=https://azuka.github.io/posts/post-0003-a-billing-problem/>A billing problem based on assumptions <i class="fa fa-chevron-circle-right"></i></a></li></ul></section></main><footer><h6>|
+Rendered by <a href=https://gohugo.io title=Hugo>Hugo</a> |
+<a href=https://azuka.github.io/index.xml>Subscribe</a></h6></footer></div><script src=/js/scripts.js></script></body></html>
