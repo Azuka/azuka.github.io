@@ -1,6 +1,6 @@
 <!doctype html><html lang=en-us><head><title>A Poor Guy's Local PHP Apm - Azuka</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="The HTML5 Herald"><meta name=author content="Azuka"><meta property="og:title" content="A Poor Guy's Local PHP Apm"><meta property="og:description" content="I&rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend Javascript, and more recently, NodeJS.
 When you have access to a full APM solution like I do at work (Newrelic), or on the side (with Elastic APM), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also why."><meta property="og:type" content="article"><meta property="og:url" content="https://azuka.github.io/posts/post-0001-a-poor-guys-apm/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2019-12-18T07:58:36-08:00"><meta property="article:modified_time" content="2019-12-18T07:58:36-08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="A Poor Guy's Local PHP Apm"><meta name=twitter:description content="I&rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend Javascript, and more recently, NodeJS.
-When you have access to a full APM solution like I do at work (Newrelic), or on the side (with Elastic APM), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also why."><meta name=generator content="Hugo 0.83.1"><link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin=anonymous><link rel=stylesheet href=https://azuka.github.io/fontawesome/css/all.min.css><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Roboto+Slab|Ruda"><link rel=stylesheet type=text/css href=/css/styles.css></head><body><div id=container><header><h1><a href=/>Azuka</a></h1><ul id=social-media><li><a href=https://github.com/Azuka title=GitHub><i class="fab fa-github fa-lg"></i></a></li><li><a href=https://gitlab.com/Azuka title=GitLab><i class="fab fa-gitlab fa-lg"></i></a></li><li><a href=https://twitter.com/zahymaka title=Twitter><i class="fab fa-twitter fa-lg"></i></a></li><li><a href=https://linkedin.com/in/Azuka title=LinkedIn><i class="fab fa-linkedin fa-lg"></i></a></li><li><a href=https://stackoverflow.com/users/66688/zahymaka title=StackOverflow><i class="fab fa-stack-overflow fa-lg"></i></a></li></ul><p><em>I like to tinker with things</em></p></header><nav><ul><li><a href=/posts/><i class="fa-li fa fa-lg"></i><span>Posts</span></a></li></ul></nav><main><article><h1>A Poor Guy's Local PHP Apm</h1><aside><ul><li><time class=post-date datetime=2019-12-18T07:58:36-08:00>Dec 18, 2019</time></li><li><em><a href=/tags/instrumentation>#instrumentation</a>
+When you have access to a full APM solution like I do at work (Newrelic), or on the side (with Elastic APM), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also why."><meta name=generator content="Hugo 0.108.0"><link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin=anonymous><link rel=stylesheet href=https://azuka.github.io/fontawesome/css/all.min.css><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Roboto+Slab|Ruda"><link rel=stylesheet type=text/css href=/css/styles.css></head><body><div id=container><header><h1><a href=/>Azuka</a></h1><ul id=social-media><li><a href=https://github.com/Azuka title=GitHub><i class="fab fa-github fa-lg"></i></a></li><li><a href=https://gitlab.com/Azuka title=GitLab><i class="fab fa-gitlab fa-lg"></i></a></li><li><a href=https://twitter.com/zahymaka title=Twitter><i class="fab fa-twitter fa-lg"></i></a></li><li><a href=https://linkedin.com/in/Azuka title=LinkedIn><i class="fab fa-linkedin fa-lg"></i></a></li><li><a href=https://stackoverflow.com/users/66688/zahymaka title=StackOverflow><i class="fab fa-stack-overflow fa-lg"></i></a></li></ul><p><em>I like to tinker with things</em></p></header><nav><ul><li><a class=active href=/posts/><i class="fa-li fa fa-lg"></i><span>Posts</span></a></li></ul></nav><main><article><h1>A Poor Guy's Local PHP Apm</h1><aside><ul><li><time class=post-date datetime=2019-12-18T07:58:36-08:00>Dec 18, 2019</time></li><li><em><a href=/tags/instrumentation>#instrumentation</a>
 ,
 <a href=/tags/opencensus>#opencensus</a>
 ,
@@ -9,319 +9,319 @@ When you have access to a full APM solution like I do at work (Newrelic), or on 
 <a href=/tags/php>#php</a></em></li><li>7 minute read</li></ul></aside><p>I&rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend Javascript, and more recently, NodeJS.</p><p>When you have access to a full APM solution like I do at work (Newrelic), or on the side (with <a href=https://www.elastic.co/products/apm>Elastic APM</a>), it becomes easy to see at a glance not only what transactions (API calls, queued jobs, asynchronous processes, etc) are taking a long time, but also <em>why</em>.</p><p>I ran into a situation where one of <a href=https://www.congregateonline.com/>my first projects</a> experienced a bottleneck
 with slow page loads. In Newrelic Lite (the free forever plan), I could tell that on average, we were making
 select queries on a table over a 100 times per page load on average. Most of this code was written in 2010
-(my excuse, although not a very good one), and at a glance it wasn&rsquo;t easy to tell <em>where</em> exactly the problem was, although I knew what it was: <a href=https://www.mehdi-khalili.com/orm-anti-patterns-part-3-lazy-loading>ORM lazy loading in a loop</a>.</p><p>Upgrading to the a pricier version of Newrelic was not an option. I had a local version of the application working with docker-compose: was there perhaps a solution I could run locally, while pinpointing the exact problem? There had to be.</p><p>I tried:</p><ul><li><strong>XDebug</strong>. The holy grail. Grind viewers were less than helpful getting an exact call sequence. Not fun.</li><li><strong>PHP APM (<a href=https://pecl.php.net/package/APM>https://pecl.php.net/package/APM</a>)</strong>. This hasn&rsquo;t been updated since 2017, fails to build on <a href=https://github.com/patrickallaert/php-apm/issues/73>PHP 7.3</a>, and I experienced random application crashes on 7.2.</li><li><strong>Pinpoint APM (<a href=https://naver.github.io/pinpoint/>https://naver.github.io/pinpoint/</a>)</strong>. Let&rsquo;s just say there was a lot of headscratching, especially around the install. I sort of got it working, but didn&rsquo;t get any useful data. Also, more random crashes.</li></ul><p>I tried other APM solutions, most of them Saas, but the hurdle was either installing them, the signup/activation process, or the knowledge that I wouldn&rsquo;t be able to reliable diagnose another problem after the trials ran out.</p><p>But wait. I&rsquo;d done some work with OpenTracing and OpenCensus before. Could I&mldr;?</p><p><a href=https://github.com/census-instrumentation/opencensus-php>YES!</a></p><p>I modified my Dockerfile very simply:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-docker data-lang=docker><span style=color:#66d9ef>FROM</span><span style=color:#e6db74> php:7.3-apache</span><span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010></span><span style=color:#75715e># Everything else</span><span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> apt-get update <span style=color:#f92672>&amp;&amp;</span> apt-get install -y zlib1g-dev libzip-dev zip unzip <span style=color:#f92672>&amp;&amp;</span> <span style=color:#ae81ff>\
-</span><span style=color:#ae81ff></span>    docker-php-ext-install iconv bcmath zip mysqli opcache pdo pdo_mysql <span style=color:#f92672>&amp;&amp;</span> <span style=color:#ae81ff>\
-</span><span style=color:#ae81ff></span>    echo <span style=color:#e6db74>&#34;done!&#34;</span><span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010></span><span style=color:#75715e># OpenCensus</span><span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> curl -L https://github.com/census-instrumentation/opencensus-php/archive/master.zip -o opencensus.zip <span style=color:#f92672>&amp;&amp;</span> unzip opencensus.zip<span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> <span style=color:#f92672>(</span>cd opencensus-php-*/ext <span style=color:#f92672>&amp;&amp;</span> phpize <span style=color:#f92672>&amp;&amp;</span> ./configure --enable-opencensus <span style=color:#f92672>&amp;&amp;</span> make <span style=color:#f92672>&amp;&amp;</span> make test <span style=color:#f92672>&amp;&amp;</span> make install<span style=color:#f92672>)</span><span style=color:#960050;background-color:#1e0010>
-</span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> docker-php-ext-enable opencensus</code></pre></div><p>I added both <code>opencensus/opencensus</code> and <code>opencensus/opencensus-exporter-zipkin</code> (for <a href=https://www.jaegertracing.io/>Jaeger</a>) to composer. I didn&rsquo;t use <code>opencensus/opencensus-exporter-jaeger</code> at the time due to <a href=https://github.com/census-ecosystem/opencensus-php-exporter-jaeger/issues/7>this issue</a>.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>composer require --dev <span style=color:#e6db74>&#39;opencensus/opencensus:^0.5.2&#39;</span> <span style=color:#e6db74>&#39;opencensus/opencensus-exporter-zipkin:^0.1.0&#39;</span>
-</code></pre></div><p>Followed by changing my docker-compose.yml:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=color:#f92672>version</span>: <span style=color:#e6db74>&#39;3.6&#39;</span>
-<span style=color:#f92672>services</span>:
-  <span style=color:#f92672>app</span>:
-    <span style=color:#f92672>build</span>: <span style=color:#ae81ff>.</span>
-    <span style=color:#f92672>links</span>:
-      - <span style=color:#ae81ff>db</span>
-    <span style=color:#f92672>ports</span>:
-      - <span style=color:#e6db74>&#39;7999:80&#39;</span>
-    <span style=color:#f92672>expose</span>:
-      - <span style=color:#e6db74>&#39;80&#39;</span>
-    <span style=color:#f92672>volumes</span>:
-      - <span style=color:#ae81ff>.:/var/www/html</span>
-    <span style=color:#f92672>environment</span>:
-      - <span style=color:#ae81ff>DB_HOST=db</span>
-      - <span style=color:#ae81ff>DB_NAME=appdb</span>
-      - <span style=color:#ae81ff>DB_USER=root</span>
-      - <span style=color:#ae81ff>DB_PASS=phpapptest</span>
-      - <span style=color:#ae81ff>DB_PORT=3306</span>
-      - <span style=color:#ae81ff>KOHANA_ENV=DEVELOPMENT</span>
-  <span style=color:#f92672>db</span>:
-    <span style=color:#f92672>image</span>: <span style=color:#e6db74>&#39;mariadb:10&#39;</span>
-    <span style=color:#f92672>ports</span>:
-      - <span style=color:#e6db74>&#39;3360:3306&#39;</span>
-    <span style=color:#f92672>volumes</span>:
-      - <span style=color:#ae81ff>./build/phpunit_database.sql:/docker-entrypoint-initdb.d/db.sql</span>
-      - <span style=color:#ae81ff>./docker/mysql:/var/lib/mysql</span>
-    <span style=color:#f92672>environment</span>:
-      <span style=color:#f92672>MYSQL_ROOT_PASSWORD</span>: <span style=color:#ae81ff>phpapptest</span>
-      <span style=color:#f92672>MYSQL_DATABASE</span>: <span style=color:#ae81ff>appdb</span>
-  <span style=color:#f92672>opencensus</span>:
-    <span style=color:#f92672>image</span>: <span style=color:#ae81ff>jaegertracing/all-in-one:latest</span>
-    <span style=color:#f92672>environment</span>:
-      <span style=color:#f92672>COLLECTOR_ZIPKIN_HTTP_PORT</span>: <span style=color:#e6db74>&#39;9411&#39;</span>
-    <span style=color:#f92672>ports</span>:
-      - <span style=color:#ae81ff>9400</span>:<span style=color:#ae81ff>16686</span>
-      - <span style=color:#ae81ff>9414</span>:<span style=color:#ae81ff>9411</span>
-    <span style=color:#f92672>expose</span>:
-      - <span style=color:#ae81ff>5775</span><span style=color:#ae81ff>/udp</span>
-      - <span style=color:#ae81ff>6831</span><span style=color:#ae81ff>/udp</span>
-      - <span style=color:#ae81ff>6832</span><span style=color:#ae81ff>/udp</span>
-      - <span style=color:#ae81ff>5778</span>
-      - <span style=color:#ae81ff>16686</span>
-      - <span style=color:#ae81ff>14268</span>
-      - <span style=color:#ae81ff>9411</span>
-</code></pre></div><p>With that, I had the Jaeger endpoint running at <code>http://localhost:9400</code></p><p>In my application entry point, right after including <code>vendor/autoload.php</code>, I added the below:</p><p>There&rsquo;s some gore in there because we&rsquo;re in the middle of replacing <a href=https://koseven.ga><del>Kohana</del> Koseven</a> with <a href=https://laravel.io>Laravel</a>.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style=color:#f92672>&lt;?</span><span style=color:#a6e22e>php</span>
-<span style=color:#66d9ef>use</span> <span style=color:#a6e22e>OpenCensus\Trace\Span</span>;
-<span style=color:#66d9ef>use</span> <span style=color:#a6e22e>OpenCensus\Trace\Tracer</span>;
-<span style=color:#66d9ef>use</span> <span style=color:#a6e22e>OpenCensus\Trace\Exporter\ZipkinExporter</span>;
-
-<span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>extension_loaded</span>(<span style=color:#e6db74>&#39;opencensus&#39;</span>)) {
-    <span style=color:#75715e>// Inbuilt instrumentation
-</span><span style=color:#75715e></span>    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\Mysql</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
-    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\PDO</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
-    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\Eloquent</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
-    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\Curl</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
-    <span style=color:#75715e>// Other
-</span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>trim</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;\\&#39;</span>), <span style=color:#e6db74>&#39;__construct&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;__construct&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;get&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $id){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;get&#39;</span>),
-            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;id&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;init&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;init&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;top&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;top&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;topMenu&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;topMenu&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#75715e>// Views
-</span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_View</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;factory&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $file){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;find_all&#39;</span>),
-            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;file&#39;</span>)),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_View</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;render&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;render&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#75715e>// Database and ORM
-</span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_ORM</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;find_all&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;find_all&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_ORM</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;find&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;find&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    $databaseClasses <span style=color:#f92672>=</span> [<span style=color:#a6e22e>Kohana_Database</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Kohana_Database_MySQLi</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Database_CMySQLi</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>];
-    <span style=color:#66d9ef>foreach</span> ($databaseClasses <span style=color:#66d9ef>as</span> $databaseClass) {
-        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;query&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $type, $sql){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;query&#39;</span>),
-                <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> [<span style=color:#e6db74>&#39;query&#39;</span> <span style=color:#f92672>=&gt;</span> $sql],
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;begin&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;begin&#39;</span>),
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;commit&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;commit&#39;</span>),
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;rollback&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;rollback&#39;</span>),
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-    }
-    <span style=color:#75715e>// Controllers
-</span><span style=color:#75715e></span>    $controllerClasses <span style=color:#f92672>=</span> [<span style=color:#a6e22e>Kohana_Controller</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Controller</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Base_Controller</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>];
-    <span style=color:#66d9ef>foreach</span> ($controllerClasses <span style=color:#66d9ef>as</span> $controllerClass) {
-        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;__construct&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;__construct&#39;</span>),
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;before&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;before&#39;</span>),
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;after&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;after&#39;</span>),
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;execute&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-            <span style=color:#66d9ef>return</span> [
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute&#39;</span>),
-                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-            ];
-        });
-    }
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Controller_Page</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;setup&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;setup&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#75715e>// Request execution and responses
-</span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;execute&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request_Client</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;execute&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request_Client</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;execute_request&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute_request&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;process&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;process&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Response</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;body&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;body&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Response</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;send_headers&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;send_headers&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#75715e>// Routing
-</span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Route</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;set&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $name){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;name&#39;</span>),
-            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;name&#39;</span>)),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Route</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;cache&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;cache&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#75715e>// Laravel
-</span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\CongreGATEv7\Models\User</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;findForPassport&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;findForPassport&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\CongreGATEv7\Models\User</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;validateForPassportPasswordGrant&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;validateForPassportPasswordGrant&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\CongreGATEv7\Models\User</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;getAuthIdentifierName&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;getAuthIdentifierName&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;retrieveById&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $identifier){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;retrieveById&#39;</span>),
-            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;identifier&#39;</span>)),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;retrieveByToken&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $identifier, $token){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;retrieveByToken&#39;</span>),
-            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;identifier&#39;</span>, <span style=color:#e6db74>&#39;token&#39;</span>)),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;updateRememberToken&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $user, $token){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;updateRememberToken&#39;</span>),
-            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>( <span style=color:#e6db74>&#39;token&#39;</span>)),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;retrieveByCredentials&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $user, $token){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;retrieveByCredentials&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;validateCredentials&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
-        <span style=color:#66d9ef>return</span> [
-            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;validateCredentials&#39;</span>),
-            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
-        ];
-    });
-    <span style=color:#a6e22e>Tracer</span><span style=color:#f92672>::</span><span style=color:#a6e22e>start</span>(<span style=color:#66d9ef>new</span> <span style=color:#a6e22e>ZipkinExporter</span>(<span style=color:#e6db74>&#39;congregate&#39;</span>, <span style=color:#e6db74>&#39;http://opencensus:9411/api/v2/spans&#39;</span>));
-}
-</code></pre></div><p>For a case where I needed a stacktrace (calling <code>debug_backtrace()</code> or <code>debug_print_backtrace()</code> inside one of the scoped lambda functions above WILL crash the application), I had to do something this ugly:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style=color:#f92672>&lt;?</span><span style=color:#a6e22e>php</span>
-
-    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>find_all</span>()
-    {
-        <span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>extension_loaded</span>(<span style=color:#e6db74>&#39;opencensus&#39;</span>)) {
-            <span style=color:#a6e22e>ob_start</span>();
-            <span style=color:#a6e22e>debug_print_backtrace</span>(<span style=color:#a6e22e>DEBUG_BACKTRACE_IGNORE_ARGS</span>);
-            $trace <span style=color:#f92672>=</span> <span style=color:#a6e22e>ob_get_clean</span>();
-            <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>Tracer</span><span style=color:#f92672>::</span><span style=color:#a6e22e>inSpan</span>([
-                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#e6db74>&#39;Model_Page::find_all.instrumented&#39;</span>,
-                <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> [
-                    <span style=color:#e6db74>&#39;trace&#39;</span> <span style=color:#f92672>=&gt;</span> $trace,
-                ]
-            ], <span style=color:#66d9ef>function</span>() {
-                <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>parent</span><span style=color:#f92672>::</span><span style=color:#a6e22e>find_all</span>();
-            });
-        }
-
-        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>parent</span><span style=color:#f92672>::</span><span style=color:#a6e22e>find_all</span>();
-    }
-</code></pre></div><p>A couple days ago, I was told calendar feeds were loading very slowly. All I had to do was look in Newrelic:</p><p><img src=/posts/post1/newrelic-breakdown.png alt="Newrelic APM Stats"></p><p>Not good. Given these relationships:</p><pre><code>Event
+(my excuse, although not a very good one), and at a glance it wasn&rsquo;t easy to tell <em>where</em> exactly the problem was, although I knew what it was: <a href=https://www.mehdi-khalili.com/orm-anti-patterns-part-3-lazy-loading>ORM lazy loading in a loop</a>.</p><p>Upgrading to the a pricier version of Newrelic was not an option. I had a local version of the application working with docker-compose: was there perhaps a solution I could run locally, while pinpointing the exact problem? There had to be.</p><p>I tried:</p><ul><li><strong>XDebug</strong>. The holy grail. Grind viewers were less than helpful getting an exact call sequence. Not fun.</li><li><strong>PHP APM (<a href=https://pecl.php.net/package/APM>https://pecl.php.net/package/APM</a>)</strong>. This hasn&rsquo;t been updated since 2017, fails to build on <a href=https://github.com/patrickallaert/php-apm/issues/73>PHP 7.3</a>, and I experienced random application crashes on 7.2.</li><li><strong>Pinpoint APM (<a href=https://naver.github.io/pinpoint/>https://naver.github.io/pinpoint/</a>)</strong>. Let&rsquo;s just say there was a lot of headscratching, especially around the install. I sort of got it working, but didn&rsquo;t get any useful data. Also, more random crashes.</li></ul><p>I tried other APM solutions, most of them Saas, but the hurdle was either installing them, the signup/activation process, or the knowledge that I wouldn&rsquo;t be able to reliable diagnose another problem after the trials ran out.</p><p>But wait. I&rsquo;d done some work with OpenTracing and OpenCensus before. Could I&mldr;?</p><p><a href=https://github.com/census-instrumentation/opencensus-php>YES!</a></p><p>I modified my Dockerfile very simply:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-docker data-lang=docker><span style=display:flex><span><span style=color:#66d9ef>FROM</span><span style=color:#e6db74> php:7.3-apache</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#75715e># Everything else</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> apt-get update <span style=color:#f92672>&amp;&amp;</span> apt-get install -y zlib1g-dev libzip-dev zip unzip <span style=color:#f92672>&amp;&amp;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    docker-php-ext-install iconv bcmath zip mysqli opcache pdo pdo_mysql <span style=color:#f92672>&amp;&amp;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    echo <span style=color:#e6db74>&#34;done!&#34;</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#75715e># OpenCensus</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> curl -L https://github.com/census-instrumentation/opencensus-php/archive/master.zip -o opencensus.zip <span style=color:#f92672>&amp;&amp;</span> unzip opencensus.zip<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> <span style=color:#f92672>(</span>cd opencensus-php-*/ext <span style=color:#f92672>&amp;&amp;</span> phpize <span style=color:#f92672>&amp;&amp;</span> ./configure --enable-opencensus <span style=color:#f92672>&amp;&amp;</span> make <span style=color:#f92672>&amp;&amp;</span> make test <span style=color:#f92672>&amp;&amp;</span> make install<span style=color:#f92672>)</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> docker-php-ext-enable opencensus</span></span></code></pre></div><p>I added both <code>opencensus/opencensus</code> and <code>opencensus/opencensus-exporter-zipkin</code> (for <a href=https://www.jaegertracing.io/>Jaeger</a>) to composer. I didn&rsquo;t use <code>opencensus/opencensus-exporter-jaeger</code> at the time due to <a href=https://github.com/census-ecosystem/opencensus-php-exporter-jaeger/issues/7>this issue</a>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>composer require --dev <span style=color:#e6db74>&#39;opencensus/opencensus:^0.5.2&#39;</span> <span style=color:#e6db74>&#39;opencensus/opencensus-exporter-zipkin:^0.1.0&#39;</span>
+</span></span></code></pre></div><p>Followed by changing my docker-compose.yml:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>version</span>: <span style=color:#e6db74>&#39;3.6&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>services</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>app</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>build</span>: <span style=color:#ae81ff>.</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>links</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>db</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>ports</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#e6db74>&#39;7999:80&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>expose</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#e6db74>&#39;80&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>volumes</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>.:/var/www/html</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>environment</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>DB_HOST=db</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>DB_NAME=appdb</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>DB_USER=root</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>DB_PASS=phpapptest</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>DB_PORT=3306</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>KOHANA_ENV=DEVELOPMENT</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>db</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>image</span>: <span style=color:#e6db74>&#39;mariadb:10&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>ports</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#e6db74>&#39;3360:3306&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>volumes</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>./build/phpunit_database.sql:/docker-entrypoint-initdb.d/db.sql</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>./docker/mysql:/var/lib/mysql</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>environment</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>MYSQL_ROOT_PASSWORD</span>: <span style=color:#ae81ff>phpapptest</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>MYSQL_DATABASE</span>: <span style=color:#ae81ff>appdb</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>opencensus</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>image</span>: <span style=color:#ae81ff>jaegertracing/all-in-one:latest</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>environment</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>COLLECTOR_ZIPKIN_HTTP_PORT</span>: <span style=color:#e6db74>&#39;9411&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>ports</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>9400</span>:<span style=color:#ae81ff>16686</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>9414</span>:<span style=color:#ae81ff>9411</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>expose</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>5775</span><span style=color:#ae81ff>/udp</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>6831</span><span style=color:#ae81ff>/udp</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>6832</span><span style=color:#ae81ff>/udp</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>5778</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>16686</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>14268</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>9411</span>
+</span></span></code></pre></div><p>With that, I had the Jaeger endpoint running at <code>http://localhost:9400</code></p><p>In my application entry point, right after including <code>vendor/autoload.php</code>, I added the below:</p><p>There&rsquo;s some gore in there because we&rsquo;re in the middle of replacing <a href=https://koseven.ga><del>Kohana</del> Koseven</a> with <a href=https://laravel.io>Laravel</a>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style=display:flex><span><span style=color:#f92672>&lt;?</span><span style=color:#a6e22e>php</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>OpenCensus\Trace\Span</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>OpenCensus\Trace\Tracer</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>use</span> <span style=color:#a6e22e>OpenCensus\Trace\Exporter\ZipkinExporter</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>extension_loaded</span>(<span style=color:#e6db74>&#39;opencensus&#39;</span>)) {
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Inbuilt instrumentation
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\Mysql</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\PDO</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\Eloquent</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>OpenCensus\Trace\Integrations\Curl</span><span style=color:#f92672>::</span><span style=color:#a6e22e>load</span>();
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Other
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>trim</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;\\&#39;</span>), <span style=color:#e6db74>&#39;__construct&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;__construct&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;get&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $id){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;get&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;id&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;init&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;init&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;top&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;top&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>PageManager</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;topMenu&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;topMenu&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Views
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_View</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;factory&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $file){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;find_all&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;file&#39;</span>)),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_View</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;render&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;render&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Database and ORM
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_ORM</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;find_all&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;find_all&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_ORM</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;find&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;find&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    $databaseClasses <span style=color:#f92672>=</span> [<span style=color:#a6e22e>Kohana_Database</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Kohana_Database_MySQLi</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Database_CMySQLi</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>];
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>foreach</span> ($databaseClasses <span style=color:#66d9ef>as</span> $databaseClass) {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;query&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $type, $sql){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;query&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> [<span style=color:#e6db74>&#39;query&#39;</span> <span style=color:#f92672>=&gt;</span> $sql],
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;begin&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;begin&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;commit&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;commit&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($databaseClass, <span style=color:#e6db74>&#39;rollback&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;rollback&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Controllers
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    $controllerClasses <span style=color:#f92672>=</span> [<span style=color:#a6e22e>Kohana_Controller</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Controller</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#a6e22e>Base_Controller</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>];
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>foreach</span> ($controllerClasses <span style=color:#66d9ef>as</span> $controllerClass) {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;__construct&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;__construct&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;before&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;before&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;after&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;after&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>opencensus_trace_method</span>($controllerClass, <span style=color:#e6db74>&#39;execute&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute&#39;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>            ];
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Controller_Page</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;setup&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;setup&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Request execution and responses
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;execute&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request_Client</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;execute&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request_Client</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;execute_request&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;execute_request&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Request</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;process&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;process&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Response</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;body&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;body&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Response</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;send_headers&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;send_headers&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Routing
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Route</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;set&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $name){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;name&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;name&#39;</span>)),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>Kohana_Route</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;cache&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;cache&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Laravel
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\CongreGATEv7\Models\User</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;findForPassport&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;findForPassport&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\CongreGATEv7\Models\User</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;validateForPassportPasswordGrant&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;validateForPassportPasswordGrant&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\CongreGATEv7\Models\User</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;getAuthIdentifierName&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;getAuthIdentifierName&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;retrieveById&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $identifier){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;retrieveById&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;identifier&#39;</span>)),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;retrieveByToken&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $identifier, $token){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;retrieveByToken&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>(<span style=color:#e6db74>&#39;identifier&#39;</span>, <span style=color:#e6db74>&#39;token&#39;</span>)),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;updateRememberToken&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $user, $token){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;updateRememberToken&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>array_map</span>(<span style=color:#e6db74>&#39;strval&#39;</span>, <span style=color:#a6e22e>compact</span>( <span style=color:#e6db74>&#39;token&#39;</span>)),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;retrieveByCredentials&#39;</span>, <span style=color:#66d9ef>function</span>($scope, $user, $token){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;retrieveByCredentials&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>opencensus_trace_method</span>(<span style=color:#a6e22e>\Illuminate\Auth\EloquentUserProvider</span><span style=color:#f92672>::</span><span style=color:#a6e22e>class</span>, <span style=color:#e6db74>&#39;validateCredentials&#39;</span>, <span style=color:#66d9ef>function</span>($scope){
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>sprintf</span>(<span style=color:#e6db74>&#39;%s::%s&#39;</span>, <span style=color:#a6e22e>get_class</span>($scope), <span style=color:#e6db74>&#39;validateCredentials&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#39;kind&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#a6e22e>Span</span><span style=color:#f92672>::</span><span style=color:#a6e22e>KIND_CLIENT</span>,
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>    });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Tracer</span><span style=color:#f92672>::</span><span style=color:#a6e22e>start</span>(<span style=color:#66d9ef>new</span> <span style=color:#a6e22e>ZipkinExporter</span>(<span style=color:#e6db74>&#39;congregate&#39;</span>, <span style=color:#e6db74>&#39;http://opencensus:9411/api/v2/spans&#39;</span>));
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>For a case where I needed a stacktrace (calling <code>debug_backtrace()</code> or <code>debug_print_backtrace()</code> inside one of the scoped lambda functions above WILL crash the application), I had to do something this ugly:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-php data-lang=php><span style=display:flex><span><span style=color:#f92672>&lt;?</span><span style=color:#a6e22e>php</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>find_all</span>()
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>extension_loaded</span>(<span style=color:#e6db74>&#39;opencensus&#39;</span>)) {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>ob_start</span>();
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>debug_print_backtrace</span>(<span style=color:#a6e22e>DEBUG_BACKTRACE_IGNORE_ARGS</span>);
+</span></span><span style=display:flex><span>            $trace <span style=color:#f92672>=</span> <span style=color:#a6e22e>ob_get_clean</span>();
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>Tracer</span><span style=color:#f92672>::</span><span style=color:#a6e22e>inSpan</span>([
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;name&#39;</span> <span style=color:#f92672>=&gt;</span> <span style=color:#e6db74>&#39;Model_Page::find_all.instrumented&#39;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#39;attributes&#39;</span> <span style=color:#f92672>=&gt;</span> [
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#39;trace&#39;</span> <span style=color:#f92672>=&gt;</span> $trace,
+</span></span><span style=display:flex><span>                ]
+</span></span><span style=display:flex><span>            ], <span style=color:#66d9ef>function</span>() {
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>parent</span><span style=color:#f92672>::</span><span style=color:#a6e22e>find_all</span>();
+</span></span><span style=display:flex><span>            });
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>parent</span><span style=color:#f92672>::</span><span style=color:#a6e22e>find_all</span>();
+</span></span><span style=display:flex><span>    }
+</span></span></code></pre></div><p>A couple days ago, I was told calendar feeds were loading very slowly. All I had to do was look in Newrelic:</p><p><img src=/posts/post1/newrelic-breakdown.png alt="Newrelic APM Stats"></p><p>Not good. Given these relationships:</p><pre tabindex=0><code>Event
 (belongsTo) EventCategory
 (hasMany) EventUnavailabilities
 </code></pre><p>on average we were querying for events 20 times, categories 57 times, unavailabilities
