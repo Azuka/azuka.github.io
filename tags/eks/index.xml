@@ -312,7 +312,7 @@ apphttproutes -- routes to --&amp;gt; svc
 adminhttproutes -- routes to --&amp;gt; adminsvc
 app -- determines and serves client based on domain --&amp;gt; sitedbs
 admin -- manages client data --&amp;gt; admindb
-admin -- manages dns records ----&amp;gt; cloudflare
+admin -- manages dns records ----&amp;gt; appdomains
 &lt;/pre&gt;&lt;p&gt;There were a few moving pieces that would make this possible:&lt;/p&gt;
 &lt;h3&gt;EKS as the container orchestration platform&lt;span class="hx:absolute hx:-mt-20" id="eks-as-the-container-orchestration-platform"&gt;&lt;/span&gt;
 &lt;a href="#eks-as-the-container-orchestration-platform" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;The &lt;a href="https://github.com/terraform-aws-modules/terraform-aws-eks"target="_blank" rel="noopener"&gt;terraform-aws-modules/terraform-aws-eks&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
