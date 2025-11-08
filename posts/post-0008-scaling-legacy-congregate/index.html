@@ -222,11 +222,6 @@ flowchart TD
         cron1[&#34;App CronJob&#34;]
         apphttproutes[&#34;App HTTP Routes&#34;]
         adminhttproutes[&#34;Admin HTTP Routes&#34;]
-        awsalb -- provisions --&gt; nlb
-        cm -- provisions --&gt; tls
-        svc --&gt; app
-        adminsvc --&gt; admin
-        lb -- routes to --&gt; gateway
     end
     subgraph asg[&#34;Autoscaling Group&#34;]
         nodes
@@ -256,6 +251,11 @@ flowchart TD
     app -- determines and serves client based on domain --&gt; sitedbs
     admin -- manages client data --&gt; admindb
     admin -- manages dns records ----&gt; appdomains
+    awsalb -- provisions --&gt; nlb
+    cm -- provisions --&gt; tls
+    svc --&gt; app
+    adminsvc --&gt; admin
+    lb -- routes to --&gt; gateway
 </pre><p>There were a few moving pieces that would make this possible:</p><h3>EKS as the container orchestration platform<span class="hx:absolute hx:-mt-20" id=eks-as-the-container-orchestration-platform></span>
 <a href=#eks-as-the-container-orchestration-platform class=subheading-anchor aria-label="Permalink for this section"></a></h3><p>The <a href=https://github.com/terraform-aws-modules/terraform-aws-eks target=_blank rel=noopener>terraform-aws-modules/terraform-aws-eks<svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/></svg></a> terraform
 module had almost everything needed to setup a cluster. We used Graviton-based instances (a mix between <code>t4g.xlarge</code> and
