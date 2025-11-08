@@ -453,6 +453,7 @@ first, then Laravel, while in the cloud version, it was Laravel first, then Koha
 &lt;/ul&gt;
 &lt;p&gt;All of these required bolstering the Codeception test suite to catch any regressions as well as to cover affected code
 paths. We went from about 350 tests to ~680.&lt;/p&gt;
+&lt;p&gt;All of these were released early and often, usually waiting until Friday evening, allowing me to catch bugs over the weekend before Sunday so they wouldn&amp;rsquo;t interfere with my day job.&lt;/p&gt;
 &lt;h3&gt;Implement Multi-tenancy&lt;span class="hx:absolute hx:-mt-20" id="implement-multi-tenancy"&gt;&lt;/span&gt;
 &lt;a href="#implement-multi-tenancy" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;A lot of the work here was done by the &lt;a href="https://tenancyforlaravel.com/"target="_blank" rel="noopener"&gt;Tenancy for Laravel&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
 &lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
