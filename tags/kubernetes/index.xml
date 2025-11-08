@@ -141,7 +141,7 @@ announced &lt;a href="https://blog.cloudflare.com/introducing-pay-per-crawl/"tar
 &lt;/svg&gt;&lt;/a&gt; around the same time. Clearly,
 everyone was affected.&lt;/p&gt;
 &lt;p&gt;Once we blocked large file access, the crawlers started to target text content and our RDS external data transfer costs
-spiked heavily given every page load pulls data from the database. LiquidWeb was able to identify abusive IPs but we
+spiked heavily as every page load pulled data from the database and we had no content cache. LiquidWeb was able to identify and block abusive IPs but we
 were playing whackamole with these, and there was always a new set when we asked. Clearly, this couldn&amp;rsquo;t go on.&lt;/p&gt;
 &lt;p&gt;Eric, the owner of the application asked what could be done on our side, so I sent the diagram below, along with a
 proposal:&lt;/p&gt;
@@ -476,7 +476,7 @@ and &lt;a href="https://cert-manager.io/docs/configuration/issuers/"target="_bla
 &lt;h2&gt;Rollout&lt;span class="hx:absolute hx:-mt-20" id="rollout"&gt;&lt;/span&gt;
 &lt;a href="#rollout" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Communication&lt;span class="hx:absolute hx:-mt-20" id="communication"&gt;&lt;/span&gt;
 &lt;a href="#communication" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;Eric sent out a few communication messages to site owners with instructions on switching DNS servers. Cloudflare limits
-the [number of inactive zones](&lt;a href="https://community.cloudflare.com/t/stuck-on-you-have-exceeded-the-limit-for-adding-zones-please-activate-some-zones/756329]"target="_blank" rel="noopener"&gt;https://community.cloudflare.com/t/stuck-on-you-have-exceeded-the-limit-for-adding-zones-please-activate-some-zones/756329]&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+the &lt;a href="https://community.cloudflare.com/t/stuck-on-you-have-exceeded-the-limit-for-adding-zones-please-activate-some-zones/756329"target="_blank" rel="noopener"&gt;number of inactive zones&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
 &lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
 &lt;/svg&gt;&lt;/a&gt; so
 communication had to go out in batches until we hit a critical mass.&lt;/p&gt;
@@ -501,8 +501,8 @@ things about &lt;a href="https://frankenphp.dev/"target="_blank" rel="noopener"&
 upcoming &lt;a href="https://github.com/serversideup/docker-php/releases/tag/v4.0.0-beta1"target="_blank" rel="noopener"&gt;v4 version&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
 &lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
 &lt;/svg&gt;&lt;/a&gt; of the php images.&lt;/p&gt;
-&lt;h3&gt;Monitoring&lt;span class="hx:absolute hx:-mt-20" id="monitoring"&gt;&lt;/span&gt;
-&lt;a href="#monitoring" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;All logs and traces are sent to &lt;a href="https://grafana.com/products/cloud/"target="_blank" rel="noopener"&gt;Grafana Cloud&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;h3&gt;Observability and Monitoring&lt;span class="hx:absolute hx:-mt-20" id="observability-and-monitoring"&gt;&lt;/span&gt;
+&lt;a href="#observability-and-monitoring" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;All logs and traces are sent to &lt;a href="https://grafana.com/products/cloud/"target="_blank" rel="noopener"&gt;Grafana Cloud&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
 &lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
 &lt;/svg&gt;&lt;/a&gt; using the k8s-monitoring chart.
 We generate a lot of data, especially metrics and tracing, but I&amp;rsquo;ve been able to tune the sampling rate. Grafana has
