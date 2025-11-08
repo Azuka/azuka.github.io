@@ -1,0 +1,528 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Azuka – Kubernetes</title><link>https://azuka.github.io/tags/kubernetes/</link><description>Recent content in Kubernetes on Azuka</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 02 Nov 2025 22:23:31 -0700</lastBuildDate><atom:link href="https://azuka.github.io/tags/kubernetes/index.xml" rel="self" type="application/rss+xml"/><item><title>Modernizing an aging PHP stack</title><link>https://azuka.github.io/posts/post-0008-scaling-legacy-congregate/</link><pubDate>Sun, 02 Nov 2025 22:23:31 -0700</pubDate><guid>https://azuka.github.io/posts/post-0008-scaling-legacy-congregate/</guid><description>
+&lt;p&gt;In April 2009, I was a junior at the now
+defunct &lt;a href="https://en.wikipedia.org/wiki/Mountain_State_University"target="_blank" rel="noopener"&gt;Mountain State University&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; in West Virginia. At the
+time I made a modest freelance income customizing themes and plugins for some of the common PHP CMSes at the time,
+especially WordPress.&lt;/p&gt;
+&lt;p&gt;I took on a project to customize WordPress for a church website: normal CMS functions with a member directory, job
+scheduling and reminders, a calendar and members&amp;rsquo; listing. It was hard work and severely tested, and perhaps contributed
+to my ability to find answers to questions. Stack Overflow was very new, so in some cases I &lt;em&gt;was&lt;/em&gt; the one answering
+questions, a lot of which haven&amp;rsquo;t held up over the years &amp;#x1f605;.&lt;/p&gt;
+&lt;p&gt;Over time, this grew into a product called &lt;a href="https://www.congregateonline.com/"target="_blank" rel="noopener"&gt;Congregate&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;. It left its WordPress
+origins within the first three years and was rewritten into a standalone full CMS using the defunct &lt;a href="https://kohanaframework.org/"target="_blank" rel="noopener"&gt;Kohana framework&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;. By
+2020, mostly through word of mouth, we had over 400 sites hosted. When the pandemic hit, load increased because a lot of
+the churches using the system had to deliver a lot of content virtually. Messaging (text, voice, push, email) exploded,
+and there were a lot more users accessing the site.&lt;/p&gt;
+&lt;p&gt;The aging deployment architecture was starting to show cracks, but the UX was also starting to turn users off. What used
+to be modern design in 2012 just wasn&amp;rsquo;t cutting it in 2019. One of my big projects around then was creating an entire
+API layer so the application contents could be used in a mobile application, but also to potentially decouple the
+presentation layer from the application logic. This would allow people other than me to build entire UIs using modern
+technologies while the application layer could evolve separately.&lt;/p&gt;
+&lt;h2&gt;Preamble&lt;span class="hx:absolute hx:-mt-20" id="preamble"&gt;&lt;/span&gt;
+&lt;a href="#preamble" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;I can use the fancy word &lt;code&gt;multitenant&lt;/code&gt; now, but Congregate had its roots in WordPress, which meant every site was
+provisioned separately, and pointed to a different database. Over time, we moved from shared hosting to a dedicated VPS,
+split out the database server (which eventually moved to Aurora RDS when I hit my limit managing it), and over time had
+clients distributed across one of three VPS servers hosted on &lt;a href="https://www.liquidweb.com/"target="_blank" rel="noopener"&gt;LiquidWeb&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, and
+running &lt;a href="https://www.cpanel.net/products/cpanel-whm-features/"target="_blank" rel="noopener"&gt;CPanel/WHM&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The servers had to be scaled and provisioned separately depending on usage, and for some of the larger clients, we would move them over to the newest
+server (&lt;code&gt;server3&lt;/code&gt;) which was provisioned with more vCPUs and RAM. We were tied to CPanel/WHM.&lt;/p&gt;
+&lt;p&gt;Provisioning was simply the owner making a new folder, creating a site in WHM/CPanel and pointing to that folder. He
+would also make a database copy for the new site. A
+&lt;code&gt;config.php&lt;/code&gt; file lived in the folder which contained said database name, and the &lt;code&gt;index.php&lt;/code&gt; file simply
+included a symlinked file that loaded the rest of the application code. A simplified deployment diagram looked like
+this:&lt;/p&gt;
+&lt;pre class="mermaid hx:mt-6"&gt;
+flowchart TD
+subgraph whm1[&amp;#34;WHM/CPanel&amp;#34;]
+app1([&amp;#34;Congregate PHP&amp;#34;])
+dns1([&amp;#34;DNS *.congregateclients.com&amp;#34;])
+cron1[&amp;#34;Cron scheduled process&amp;#34;]
+end
+subgraph server1[&amp;#34;server1&amp;#34;]
+whm1
+end
+subgraph whm2[&amp;#34;WHM/CPanel&amp;#34;]
+app2([&amp;#34;Congregate PHP&amp;#34;])
+dns2([&amp;#34;DNS *.b.congregateclients.com&amp;#34;])
+cron2[&amp;#34;Cron scheduled process&amp;#34;]
+end
+subgraph server2[&amp;#34;server2&amp;#34;]
+whm2
+end
+subgraph whm3[&amp;#34;WHM/CPanel&amp;#34;]
+app3([&amp;#34;Congregate PHP&amp;#34;])
+dns3([&amp;#34;DNS *.c.congregateclients.com&amp;#34;])
+end
+subgraph server3[&amp;#34;server3&amp;#34;]
+whm3
+end
+subgraph liquidweb[&amp;#34;LiquidWeb&amp;#34;]
+server1
+server2
+server3
+end
+subgraph external
+site1[&amp;#34;Site 1&amp;#34;]
+site2[&amp;#34;Site 2&amp;#34;]
+site3[&amp;#34;Site 3&amp;#34;]
+end
+site1 -- served from --&amp;gt; server1
+site2 -- served from --&amp;gt; server2
+site3 -- served from --&amp;gt; server3
+&lt;/pre&gt;&lt;p&gt;I had a pretty good CI/CD configuration using Bitbucket/CircleCI which ran a lot of unit (with PHPUnit) and
+acceptance/API (using Codeception) tests. Logs were piped to Loggly (acquired by SolarWinds in 2018), so troubleshooting
+was somewhat manageable. I shared this with the owner:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The current application is treated as multiple applications deployed to multiple servers. A few weaknesses of this
+approach:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Every site’s database has to be set up manually and configured separately using config files.&lt;/li&gt;
+&lt;li&gt;Since each site is tied to the server it’s managed on, DNS configuration is difficult, with server1 hosting the name
+servers for the congregateclients.com domain, and delegating b.congregateclients.com to server2 and
+c.congregateclients.com to server3 respectively&lt;/li&gt;
+&lt;li&gt;Due to how the servers were set up (mostly manually), setting up a new server if we need to scale would require
+trial and error to ensure they are configured the same way. I have some written notes, but we have made many changes
+to tune PHP/Apache and the log setup over the years that would involve a lot of trial and error to get working.&lt;/li&gt;
+&lt;li&gt;We are limited by the servers running on Centos 7 which is no longer supported by CPanel (
+see &lt;a href="https://support.cpanel.net/hc/en-us/articles/19649329138327-When-will-cPanel-stop-supporting-CentOS-7"target="_blank" rel="noopener"&gt;https://support.cpanel.net/hc/en-us/articles/19649329138327-When-will-cPanel-stop-supporting-CentOS-7&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;It is difficult to synchronize changes across multiple servers. The deploy process uses a lot of resources, because
+we:
+&lt;ul&gt;
+&lt;li&gt;Deploy the code to each server via ssh/sftp&lt;/li&gt;
+&lt;li&gt;Swap out a symlink between the old and new versions of the code&lt;/li&gt;
+&lt;li&gt;Build any UI packages (like the theme selector for the admin)&lt;/li&gt;
+&lt;li&gt;Run migrations across all sites which potentially causes the server to become unresponsive because we start one
+background process PER site&lt;/li&gt;
+&lt;li&gt;We currently run into performance issues because every site runs a different php process. php-fpm (used on the demo
+site) is very performant, but due to how CPanel/WHM is set up, dedicating one fpm process per site would mean
+scaling the servers up to a ridiculous 128GB RAM per server instead of about 12-16GB.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;In addition to these:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;PHP was locked at version &lt;code&gt;8.3&lt;/code&gt;. We could not upgrade the Centos servers so we couldn&amp;rsquo;t take advantage of any
+security / performance improvements as well as new features in &lt;code&gt;8.4&lt;/code&gt;, with &lt;code&gt;8.5&lt;/code&gt; just around the corner.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;So what was the trigger?&lt;span class="hx:absolute hx:-mt-20" id="so-what-was-the-trigger"&gt;&lt;/span&gt;
+&lt;a href="#so-what-was-the-trigger" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Things came to a head at the beginning of 2025. LLMs had exploded the year before, but 2025 was when AI tools hit
+critical mass and the companies behind them began to hungrily scrape data from the Internet.&lt;/p&gt;
+&lt;p&gt;We were hit on two fronts: CloudFront daily bills suddenly spiked from less than $4/day to over $200/day, and the VPSes
+were experiencing massive load, leading to slow loading sites and outright outages.&lt;/p&gt;
+&lt;p&gt;We had AWS WAF deployed in front of the CloudFront CDN, but the basic blocking rules were just not ready for the deluge
+of requests. I spent my evenings after work searching for patterns in AWS Athena (from CloudFront logs) and tweaking WAF rules with terraform.
+We had to turn on &lt;a href="https://docs.aws.amazon.com/waf/latest/developerguide/waf-bot-control.html"target="_blank" rel="noopener"&gt;bot control&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, block whole
+ip ranges and countries, then get creative with counting rules when we inevitably started blocking legitimate access to
+large (mostly mp3) files from podcast aggregators and real users, or images from email clients. Luckily, when we reached
+out to AWS Support, we were able to get a refund/account credit, with the only requirement being that we turn
+on &lt;a href="https://aws.amazon.com/aws-cost-management/aws-cost-anomaly-detection/"target="_blank" rel="noopener"&gt;AWS Cost Anomaly Detection&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;LiquidWeb, our host had to implement site-wide mod_security rules which caused
+an &lt;a href="https://status.liquidweb.com/incidents/15cjwkx21b7s"target="_blank" rel="noopener"&gt;incident&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, and Cloudflare
+announced &lt;a href="https://blog.cloudflare.com/introducing-pay-per-crawl/"target="_blank" rel="noopener"&gt;pay per crawl&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; around the same time. Clearly,
+everyone was affected.&lt;/p&gt;
+&lt;p&gt;Once we blocked large file access, the crawlers started to target text content and our RDS external data transfer costs
+spiked heavily given every page load pulls data from the database. LiquidWeb was able to identify abusive IPs but we
+were playing whackamole with these, and there was always a new set when we asked. Clearly, this couldn&amp;rsquo;t go on.&lt;/p&gt;
+&lt;p&gt;Eric, the owner of the application asked what could be done on our side, so I sent the diagram below, along with a
+proposal:&lt;/p&gt;
+&lt;pre class="mermaid hx:mt-6"&gt;
+---
+config:
+layout: elk
+---
+flowchart TD
+lb[&amp;#34;Load Balancer&amp;#34;]
+subgraph aws
+db[(&amp;#34;admin database&amp;#34;)]
+end
+subgraph cloud[&amp;#34;Cloud, e.g. DigitalOcean&amp;#34;]
+cluster
+dns(&amp;#34;DNS Management&amp;#34;)
+end
+subgraph cluster
+node1
+node2
+node3
+end
+subgraph node1[&amp;#34;node1&amp;#34;]
+app1([&amp;#34;Congregate PHP FPM&amp;#34;])
+admin1([&amp;#34;Admin&amp;#34;])
+cron1[&amp;#34;Cron scheduled process&amp;#34;]
+end
+subgraph node2[&amp;#34;node2&amp;#34;]
+app2([&amp;#34;Congregate PHP&amp;#34;])
+end
+subgraph node3[&amp;#34;node3&amp;#34;]
+app3([&amp;#34;Congregate PHP&amp;#34;])
+end
+subgraph external
+site1[&amp;#34;Site 1&amp;#34;]
+site2[&amp;#34;Site 2&amp;#34;]
+site3[&amp;#34;Site 3&amp;#34;]
+end
+site1 -- served from --&amp;gt; lb
+site2 -- served from --&amp;gt; lb
+site3 -- served from --&amp;gt; lb
+lb -- routes to --&amp;gt; app1 &amp;amp; app2 &amp;amp; app3
+app1 &amp;amp; app2 &amp;amp; app3 -- determines and serves client based on domain --&amp;gt; db
+admin1 -- manages client data --&amp;gt; db
+admin1 -- manages dns records --&amp;gt; dns
+&lt;/pre&gt;&lt;blockquote&gt;
+&lt;p&gt;What the new design achieves is:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;We can make the application more performant because we can easily scale up and down to handle peak loads (e.g. on
+Sundays)&lt;/li&gt;
+&lt;li&gt;We can isolate our infrastructure from public access&lt;/li&gt;
+&lt;li&gt;We can have a centralized database where client data lives, which allows us to build an admin panel to manage client
+domains, as well as to instantly provision a new site and turn sites on / off. We can also centralize the management
+of configuration instead of needing to log into every site as a sysop user, e.g. for configuring modules and
+features.&lt;/li&gt;
+&lt;li&gt;It becomes easier to monitor the sites as we can centralize logging and error reporting (I have a few providers we
+can use where we fall within the free tier, similar to &lt;code&gt;&amp;lt;redacted&amp;gt;&lt;/code&gt;).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To build this out, we will need a minimal viable setup that demonstrates:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;An Admin API for client management&lt;/li&gt;
+&lt;li&gt;A cloud provider with api support for DNS management and Kubernetes (which we’ll use for deploying the application).&lt;/li&gt;
+&lt;li&gt;We’ll need support for scalable load balancers which we can point the DNS records to.&lt;/li&gt;
+&lt;li&gt;A deployment pipeline from GitHub to the setup.&lt;/li&gt;
+&lt;li&gt;We’ll also need to solve the case where we load directory photos from the file system. This is because we use them
+in the vcards / pdfs, but we can change how this is done.&lt;/li&gt;
+&lt;li&gt;1-2 sites we can configure through the admin api to automatically sync dns to the cloud provider.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Honestly, I wasn&amp;rsquo;t a 100% positive this would work. We had three types of sites hosted on the platform:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Domain pointed to one of the server ips.&lt;/li&gt;
+&lt;li&gt;Domain using one of our vanity nameservers (&lt;code&gt;ns*.congregateclients.com&lt;/code&gt;) which resolved to one of the servers.&lt;/li&gt;
+&lt;li&gt;One of the above, but with a subdomain pointed to the application on one of the servers. I&amp;rsquo;d built an entire SSO
+system for a WordPress plugin (developed by someone else) which allowed churches more flexibility with their site
+design while integrating with the Congregate API to fetch data.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;I had the vague idea that I could start on DigitalOcean (for cost reasons), then switch over to AWS when ready, but
+luckily after a couple discussions, it made sense to go with AWS all the way, especially when factoring in the cost of
+rewriting API calls that weren&amp;rsquo;t a one-to-one mapping between both cloud services. Most of our cloud infrastructure was
+already hosted there anyway:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;S3 for file storage&lt;/li&gt;
+&lt;li&gt;CloudFront as a CDN&lt;/li&gt;
+&lt;li&gt;Aurora RDS as the primary data store&lt;/li&gt;
+&lt;li&gt;AWS Transcribe Jobs for sermons audio to speech&lt;/li&gt;
+&lt;li&gt;SQS for message queues and background processing&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Solution&lt;span class="hx:absolute hx:-mt-20" id="solution"&gt;&lt;/span&gt;
+&lt;a href="#solution" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;This seemed like a perfect use-case for Kubernetes, specifically AWS EKS. Containerization would resolve all (or most
+of) our dependency issues, and I was already familiar with a few open source projects
+like &lt;a href="https://cert-manager.io/"target="_blank" rel="noopener"&gt;cert-manager&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; for dynamic SSL certificate provisioning
+and &lt;a href="https://github.com/kubernetes-sigs/external-dns"target="_blank" rel="noopener"&gt;external-dns&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; with AWS Route53 integration. This seemed &lt;em&gt;doable&lt;/em&gt;
+and I was excited.&lt;/p&gt;
+&lt;p&gt;The servers + backup on LiquidWeb were costing somewhere around $170/month per server, and
+optimistically, we could get our costs somewhere around $450/month while future-proofing the application and infrastructure.&lt;/p&gt;
+&lt;p&gt;This was where we ended up:&lt;/p&gt;
+&lt;pre class="mermaid hx:mt-6"&gt;
+---
+config:
+layout: elk
+elk:
+mergeEdges: true
+nodePlacementStrategy: LINEAR_SEGMENTS
+---
+flowchart TD
+subgraph db[&amp;#34;RDS Cluster&amp;#34;]
+sitedbs[(Site Databases)]
+admindb[(Admin Database)]
+end
+subgraph defaultvpc[&amp;#34;Default VPC&amp;#34;]
+db
+end
+subgraph aws
+defaultvpc
+cloudvpc
+end
+subgraph gw[&amp;#34;Envoy Gateway&amp;#34;]
+lb[&amp;#34;Load Balancer Service&amp;#34;]
+gateway[&amp;#34;Global Gateway&amp;#34;]
+tls[&amp;#34;TLS Certs&amp;#34;]
+end
+subgraph nodes
+awsalb[&amp;#34;AWS ALB Controller&amp;#34;]
+cm[&amp;#34;Cert Manager&amp;#34;]
+gw
+app([&amp;#34;App deployment and HPA&amp;#34;])
+svc([&amp;#34;App Service&amp;#34;])
+adminsvc([&amp;#34;Admin Service&amp;#34;])
+admin([&amp;#34;Admin deployment and HPA&amp;#34;])
+cron1[&amp;#34;App CronJob&amp;#34;]
+apphttproutes[&amp;#34;App HTTP Routes&amp;#34;]
+adminhttproutes[&amp;#34;Admin HTTP Routes&amp;#34;]
+awsalb -- provisions --&amp;gt; nlb
+cm -- provisions --&amp;gt; tls
+svc --&amp;gt; app
+adminsvc --&amp;gt; admin
+lb -- routes to --&amp;gt; gateway
+end
+subgraph asg[&amp;#34;Autoscaling Group&amp;#34;]
+nodes
+end
+subgraph cluster[&amp;#34;EKS Cluster&amp;#34;]
+asg
+end
+subgraph cloudflare
+subgraph appdomains[&amp;#34;App Domains&amp;#34;]
+site1[&amp;#34;Site 1&amp;#34;]
+site2[&amp;#34;Site 2&amp;#34;]
+site3[&amp;#34;Site 3&amp;#34;]
+end
+adminsite[&amp;#34;Admin Site&amp;#34;]
+end
+subgraph cloudvpc[&amp;#34;Cloud VPC&amp;#34;]
+cluster
+nlb[&amp;#34;Network Load Balancer&amp;#34;]
+end
+defaultvpc &amp;lt;--- peering --&amp;gt; cloudvpc
+tls -- used by --- apphttproutes &amp;amp; adminhttproutes
+site1 &amp;amp; site2 &amp;amp; site3 &amp;amp; adminsite -- served from --&amp;gt; nlb
+nlb -- routes to --&amp;gt; lb
+gateway -- routes to --&amp;gt; apphttproutes &amp;amp; adminhttproutes
+apphttproutes -- routes to --&amp;gt; svc
+adminhttproutes -- routes to --&amp;gt; adminsvc
+app -- determines and serves client based on domain --&amp;gt; sitedbs
+admin -- manages client data --&amp;gt; admindb
+admin -- manages dns records ----&amp;gt; cloudflare
+&lt;/pre&gt;&lt;p&gt;There were a few moving pieces that would make this possible:&lt;/p&gt;
+&lt;h3&gt;EKS as the container orchestration platform&lt;span class="hx:absolute hx:-mt-20" id="eks-as-the-container-orchestration-platform"&gt;&lt;/span&gt;
+&lt;a href="#eks-as-the-container-orchestration-platform" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;The &lt;a href="https://github.com/terraform-aws-modules/terraform-aws-eks"target="_blank" rel="noopener"&gt;terraform-aws-modules/terraform-aws-eks&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; terraform
+module had almost everything needed to setup a cluster. We used Graviton-based instances (a mix between &lt;code&gt;t4g.xlarge&lt;/code&gt; and
+&lt;code&gt;r6g.large&lt;/code&gt;, thanks &lt;a href="https://instances.vantage.sh/"target="_blank" rel="noopener"&gt;instances.vantage.sh&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;) and setup
+ECR &lt;a href="https://github.com/terraform-aws-modules/terraform-aws-ecr"target="_blank" rel="noopener"&gt;registries&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; for the different applications.&lt;/p&gt;
+&lt;p&gt;I had setup kubernetes clusters before on a range of cloud providers, but nothing quite prepared me for
+EKS. &lt;a href="https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html"target="_blank" rel="noopener"&gt;Access entries&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, &lt;a href="https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html"target="_blank" rel="noopener"&gt;addon management&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, &lt;a href="https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html"target="_blank" rel="noopener"&gt;IAM roles for service accounts&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, &lt;a href="https://github.com/terraform-aws-modules/terraform-aws-iam/tree/master/modules/iam-oidc-provider"target="_blank" rel="noopener"&gt;configuring the IAM OIDC provider for GitHub&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;
+were just a few things I had to learn about / find. I will eventually go back and properly
+implement &lt;a href="https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html"target="_blank" rel="noopener"&gt;pod identity&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, maybe&amp;hellip;&lt;/p&gt;
+&lt;p&gt;Throw in a few modules that &lt;em&gt;should&lt;/em&gt; have been addons (they frequently are elsewhere) like
+the &lt;a href="https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/"target="_blank" rel="noopener"&gt;AWS Load Balancer Controller&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, &lt;a href="https://secrets-store-csi-driver.sigs.k8s.io/"target="_blank" rel="noopener"&gt;Secrets Store CSI Driver&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; + &lt;a href="https://github.com/aws/secrets-store-csi-driver-provider-aws"target="_blank" rel="noopener"&gt;AWS Secret Store Provider&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, &lt;a href="https://docs.aws.amazon.com/eks/latest/best-practices/cas.html"target="_blank" rel="noopener"&gt;Cluster Autoscaler&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;
+and &lt;a href="https://github.com/kubernetes-sigs/descheduler"target="_blank" rel="noopener"&gt;Descheduler&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, and cluster setup cost me a solid weekend and some.&lt;/p&gt;
+&lt;p&gt;Shoutout to &lt;a href="https://github.com/cloudposse/terraform-aws-vpc-peering"target="_blank" rel="noopener"&gt;cloudposse/vpc-peering/aws&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; which saved me from a
+long session of setting up VPC peering between the new cloud infrastructure and the default VPC where the existing
+database lived.&lt;/p&gt;
+&lt;p&gt;I did not want to manage or do any work with
+a &lt;a href="https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/"target="_blank" rel="noopener"&gt;CNI plugin&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; yet, so I
+just went with the AWS &lt;a href="https://docs.aws.amazon.com/eks/latest/best-practices/vpc-cni.html"target="_blank" rel="noopener"&gt;VPC CNI&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, learning
+about &lt;a href="https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html"target="_blank" rel="noopener"&gt;prefix delegation&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; along the way
+when nodes refused to schedule pods even with available resources.&lt;/p&gt;
+&lt;h3&gt;Cloudflare as the DNS provider&lt;span class="hx:absolute hx:-mt-20" id="cloudflare-as-the-dns-provider"&gt;&lt;/span&gt;
+&lt;a href="#cloudflare-as-the-dns-provider" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;I was initially going to do some work with Route53 but when I ran the costs for hosted zones, I started to look
+elsewhere.&lt;/p&gt;
+&lt;p&gt;As far as I knew, there was no official limit for Cloudflare with their free plan, and I&amp;rsquo;d
+seen &lt;a href="https://community.cloudflare.com/t/how-many-domains-can-you-have-in-your-free-account/11864/3"target="_blank" rel="noopener"&gt;numbers in the thousands&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;
+thrown around, which we weren&amp;rsquo;t in any danger of exceeding: at last count, we were still under 600 sites.&lt;/p&gt;
+&lt;p&gt;Considering we&amp;rsquo;d get universal SSL, and a world-class WAF at no cost, along with a well-documented API and SDK clients,
+this seemed like a winner.&lt;/p&gt;
+&lt;h3&gt;Tenancy for Laravel as the tenancy resolver&lt;span class="hx:absolute hx:-mt-20" id="tenancy-for-laravel-as-the-tenancy-resolver"&gt;&lt;/span&gt;
+&lt;a href="#tenancy-for-laravel-as-the-tenancy-resolver" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;I have written multitenancy systems before, and I really did not want to have to write another one for this.&lt;/p&gt;
+&lt;p&gt;Luckily, back when I created the API layer, I had created an unholy mash between the newer and more modern Laravel
+framework and the original Kohana. Newer route endpoints used Laravel&amp;rsquo;s routing system, but the framework was
+initialized after Kohana. It was messy but it worked.&lt;/p&gt;
+&lt;p&gt;The &lt;a href="https://tenancyforlaravel.com/"target="_blank" rel="noopener"&gt;Tenancy for Laravel&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; had almost everything I wanted, and for anything that wasn&amp;rsquo;t
+present, the documentation was very clear about how to implement them.&lt;/p&gt;
+&lt;h3&gt;Grafana Cloud for monitoring&lt;span class="hx:absolute hx:-mt-20" id="grafana-cloud-for-monitoring"&gt;&lt;/span&gt;
+&lt;a href="#grafana-cloud-for-monitoring" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;&lt;a href="https://grafana.com/products/cloud/"target="_blank" rel="noopener"&gt;Grafana Cloud&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; probably has the best free plan you can get from an observability
+platform.&lt;/p&gt;
+&lt;p&gt;It does get a bit overwhelming though, and what I&amp;rsquo;ve learned should probably go into a separate post. I used
+the &lt;a href="https://github.com/grafana/k8s-monitoring-helm"target="_blank" rel="noopener"&gt;k8s-monitoring chart&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; to deploy via Helm,
+the &lt;a href="https://grafana.com/docs/grafana-cloud/developer-resources/infrastructure-as-code/terraform/"target="_blank" rel="noopener"&gt;grafana provider&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; to
+set up applications, alerts and synthetics, and the
+new &lt;a href="https://registry.terraform.io/providers/grafana/grafana-adaptive-metrics/latest"target="_blank" rel="noopener"&gt;grafana-adaptive-metrics&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; provider
+to cut down on metrics ingestion.&lt;/p&gt;
+&lt;h3&gt;Envoy Gateway + AWS NLB for load balancing&lt;span class="hx:absolute hx:-mt-20" id="envoy-gateway--aws-nlb-for-load-balancing"&gt;&lt;/span&gt;
+&lt;a href="#envoy-gateway--aws-nlb-for-load-balancing" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;The major challenge faced with routing and the DNS setup here was that we needed a static set of IPs for Cloudflare or
+whichever DNS provider we would use. As of the writing of this article, the recommendation from AWS is to assign static
+IPs to an NLB, with an ALB serving as a target, or to use AWS Global Accelerator.&lt;/p&gt;
+&lt;p&gt;We definitely did not (for cost reasons) want to pay for Global Accelerator or for &lt;strong&gt;two&lt;/strong&gt; load balancers.&lt;/p&gt;
+&lt;p&gt;Additionally, the &lt;a href="https://kubernetes.io/docs/concepts/services-networking/ingress/"target="_blank" rel="noopener"&gt;Ingress API&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; for Kubernetes has
+been frozen, and I was itching to try out the new &lt;a href="https://gateway-api.sigs.k8s.io/"target="_blank" rel="noopener"&gt;Gateway API&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, eventually
+picking &lt;a href="https://gateway.envoyproxy.io/"target="_blank" rel="noopener"&gt;Envoy Gateway&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; running behind a single NLB.&lt;/p&gt;
+&lt;p&gt;We&amp;rsquo;re also running &lt;a href="https://coraza.io/"target="_blank" rel="noopener"&gt;Coraza&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; via an Envoy Extension Policy as
+a &lt;a href="https://github.com/envoyproxy/gateway/issues/671#issuecomment-2419684086"target="_blank" rel="noopener"&gt;fallback WAF&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;h3&gt;serversideup/php for base images&lt;span class="hx:absolute hx:-mt-20" id="serversideupphp-for-base-images"&gt;&lt;/span&gt;
+&lt;a href="#serversideupphp-for-base-images" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;I think I found &lt;a href="https://serversideup.net/open-source/docker-php/"target="_blank" rel="noopener"&gt;serversideup/php&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; when I was having trouble building
+an image with the php opentelemetry extension. It saved a lot of effort that would have gone into managing the extension
+install but also configuring the application server variant (Apache, Nginx+fpm, or Nginx Unit).&lt;/p&gt;
+&lt;h2&gt;Implementation&lt;span class="hx:absolute hx:-mt-20" id="implementation"&gt;&lt;/span&gt;
+&lt;a href="#implementation" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Cloud readiness and feature parity&lt;span class="hx:absolute hx:-mt-20" id="cloud-readiness-and-feature-parity"&gt;&lt;/span&gt;
+&lt;a href="#cloud-readiness-and-feature-parity" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;I had a few things to do before even switching the deployment mechanism:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Unify the database layer&lt;/strong&gt;:
+I alluded earlier to the unholy mash of two different frameworks. The database in particular was a big one: Laravel
+used a PDO connection while the rest of the site used the php mysqli extension. I had to switch this so the database was Laravel-first,
+and wrote a custom driver to either use the existing PDO connection or initialize it on demand.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Remove all local file actions&lt;/strong&gt;:
+The application was littered with &lt;code&gt;file_exists()&lt;/code&gt; checks for the earliest features where files were still stored on
+the servers e.g. for directory photos. All local files were synced to S3,
+and the database tables for the models had an additional JSON or boolean column to track file existence.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Unify the cache layer&lt;/strong&gt;:
+Similar to the database, we had two different cache stores. This was unified, and in the cloud version we set up a
+small Elasticache Valkey instance to serve as a distributed cache.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Create a Laravel entrypoint&lt;/strong&gt;:
+Instead of loading Laravel after Kohana, I moved all of Kohana&amp;rsquo;s initialization into a service that got loaded for
+fallback routes, but also extensively used Laravel&amp;rsquo;s service container to initialize on demand e.g. for logic in the
+calendar that hadn&amp;rsquo;t yet been ported over. On the VPS version (because it worked), the application was Kohana
+first, then Laravel, while in the cloud version, it was Laravel first, then Kohana.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;All of these required bolstering the Codeception test suite to catch any regressions as well as to cover affected code
+paths. We went from about 350 tests to ~680.&lt;/p&gt;
+&lt;h3&gt;Implement Multi-tenancy&lt;span class="hx:absolute hx:-mt-20" id="implement-multi-tenancy"&gt;&lt;/span&gt;
+&lt;a href="#implement-multi-tenancy" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;A lot of the work here was done by the &lt;a href="https://tenancyforlaravel.com/"target="_blank" rel="noopener"&gt;Tenancy for Laravel&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; package.
+There were a few minor issues that involved tweaking the service container to reset singleton services when switching
+between tenants.&lt;/p&gt;
+&lt;p&gt;I also wrote a script as part of the regular cron process to self-register all the sites as tenants in the admin
+database.&lt;/p&gt;
+&lt;p&gt;Every site has a corresponding gateway route pointing to the application service, as well as a TLS configuration to generate
+an SSL certificate with Let&amp;rsquo;s Encrypt.&lt;/p&gt;
+&lt;h3&gt;Admin and DNS Management&lt;span class="hx:absolute hx:-mt-20" id="admin-and-dns-management"&gt;&lt;/span&gt;
+&lt;a href="#admin-and-dns-management" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;The admin interface was a simple Angular application backed by a &lt;a href="https://connectrpc.com/"target="_blank" rel="noopener"&gt;ConnectRPC&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; API interface.&lt;/p&gt;
+&lt;p&gt;The Admin API uses the Cloudflare API to create and delete DNS records, as well as the Kubernetes API to manage &lt;a href="https://gateway-api.sigs.k8s.io/api-types/httproute/"target="_blank" rel="noopener"&gt;gateway http routes&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;
+and &lt;a href="https://cert-manager.io/docs/configuration/issuers/"target="_blank" rel="noopener"&gt;attached certmanager issuers&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;h2&gt;Rollout&lt;span class="hx:absolute hx:-mt-20" id="rollout"&gt;&lt;/span&gt;
+&lt;a href="#rollout" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Communication&lt;span class="hx:absolute hx:-mt-20" id="communication"&gt;&lt;/span&gt;
+&lt;a href="#communication" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;Eric sent out a few communication messages to site owners with instructions on switching DNS servers. Cloudflare limits
+the [number of inactive zones](&lt;a href="https://community.cloudflare.com/t/stuck-on-you-have-exceeded-the-limit-for-adding-zones-please-activate-some-zones/756329]"target="_blank" rel="noopener"&gt;https://community.cloudflare.com/t/stuck-on-you-have-exceeded-the-limit-for-adding-zones-please-activate-some-zones/756329]&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; so
+communication had to go out in batches until we hit a critical mass.&lt;/p&gt;
+&lt;h3&gt;Scaling&lt;span class="hx:absolute hx:-mt-20" id="scaling"&gt;&lt;/span&gt;
+&lt;a href="#scaling" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;We initially started out with the nginx+php-fpm variant of &lt;code&gt;serversideup/php&lt;/code&gt;. We scaled up and
+benchmarked with &lt;a href="https://k6.io/"target="_blank" rel="noopener"&gt;k6&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; and &lt;a href="https://www.artillery.io/"target="_blank" rel="noopener"&gt;Artillery&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; but kept getting high cpu usage. The directory pdf generation had to be moved to a
+background process, but we were also able to tune the HPA and resource requests/limits for both the Envoy Gateway pods and the application to handle
+the load.&lt;/p&gt;
+&lt;p&gt;For the application, we got better performance and resource usage with the &lt;a href="https://unit.nginx.org/"target="_blank" rel="noopener"&gt;Nginx Unit&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; variant.&lt;/p&gt;
+&lt;p&gt;Sadly, Nginx Unit &lt;a href="https://github.com/nginx/unit"target="_blank" rel="noopener"&gt;has been archived&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, and is no longer maintained. I&amp;rsquo;ve heard some good
+things about &lt;a href="https://frankenphp.dev/"target="_blank" rel="noopener"&gt;FrankenPHP&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, which is supported in the
+upcoming &lt;a href="https://github.com/serversideup/docker-php/releases/tag/v4.0.0-beta1"target="_blank" rel="noopener"&gt;v4 version&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; of the php images.&lt;/p&gt;
+&lt;h3&gt;Monitoring&lt;span class="hx:absolute hx:-mt-20" id="monitoring"&gt;&lt;/span&gt;
+&lt;a href="#monitoring" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;All logs and traces are sent to &lt;a href="https://grafana.com/products/cloud/"target="_blank" rel="noopener"&gt;Grafana Cloud&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; using the k8s-monitoring chart.
+We generate a lot of data, especially metrics and tracing, but I&amp;rsquo;ve been able to tune the sampling rate. Grafana has
+also released a few &lt;a href="https://grafana.com/docs/grafana-cloud/adaptive-telemetry/"target="_blank" rel="noopener"&gt;adaptive telemetry&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; options which help
+filter out unwanted data.&lt;/p&gt;
+&lt;p&gt;We have Grafana synthetic checks set up to monitor the DNS, latency and ssl certificate expiration for which all the
+alerts go to a
+dedicated Slack channel.&lt;/p&gt;
+&lt;p&gt;We setup a &lt;a href="https://congregate.statuspage.io/"target="_blank" rel="noopener"&gt;status page&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; to inform customers of incidents and scheduled
+maintenance which also tracks some of the downstream services we use.&lt;/p&gt;
+&lt;p&gt;Grafana Cloud also has &lt;a href="https://grafana.com/products/cloud/irm/"target="_blank" rel="noopener"&gt;incident response and management&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt;, as well
+as &lt;a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/slo/"target="_blank" rel="noopener"&gt;SLO management&lt;svg class="hx:inline hx:rtl:rotate-270 hx:align-baseline" height="1em" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"&gt;
+&lt;path d="m9.1716 7.7574h7.0711m0 0v7.0711m0-7.0711-8.4853 8.4853" stroke-linecap="round" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;&lt;/a&gt; tools that I hope to explore and use.&lt;/p&gt;
+&lt;h2&gt;Conclusion&lt;span class="hx:absolute hx:-mt-20" id="conclusion"&gt;&lt;/span&gt;
+&lt;a href="#conclusion" class="subheading-anchor" aria-label="Permalink for this section"&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;This was an exhilarating learning experience, and I&amp;rsquo;m glad I got to do it. I&amp;rsquo;m sure some of this will change, and if
+interesting enough, I&amp;rsquo;ll write about them.&lt;/p&gt;</description></item></channel></rss>

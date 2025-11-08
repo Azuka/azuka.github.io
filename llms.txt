@@ -1,0 +1,19 @@
+# Azuka
+
+> <no value>
+
+
+## Posts
+- [Modernizing an aging PHP stack](https://azuka.github.io/posts/post-0008-scaling-legacy-congregate/): In April 2009, I was a junior at the now defunct Mountain State University in West Virginia. At the … - Published 2025-11-02
+- [At GopherCon](https://azuka.github.io/posts/post-0005-at-gophercon/): &ldquo;Sorry, I&rsquo;ll have to drop in 8 minutes&rdquo; I typed into a dedicated Slack channel at … - Published 2023-09-28
+- [Fun with php deployer and ssh](https://azuka.github.io/posts/post-0004-fun-with-the-ssh-a-flag/): A long, long time ago when my daily driver was a Windows machine, I used to deploy websites over … - Published 2022-12-19
+- [A billing problem based on assumptions](https://azuka.github.io/posts/post-0003-a-billing-problem/): My partner and I started SingleSend a little over a year ago.
+Everything we knew about SMS messages … - Published 2021-05-23
+- [That Minor SNAFU With Go Types](https://azuka.github.io/posts/post-0002-that-minor-snafu-with-go-types/): Today&rsquo;s specimen:
+type expectedError struct { error } func (e *expectedError) Cause() error { … - Published 2020-02-28
+- [A Poor Guy's Local PHP Apm](https://azuka.github.io/posts/post-0001-a-poor-guys-apm/): I&rsquo;ve seen the benefits of instrumenting code for a very long time: with PHP, Go, Frontend … - Published 2019-12-18
+
+
+---
+Generated on 2025-11-08 05:57:08 UTC
+Site: https://azuka.github.io/
